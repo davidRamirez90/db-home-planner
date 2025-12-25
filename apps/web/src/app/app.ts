@@ -1,10 +1,12 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { workerApiBaseUrl } from './api-config';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.html',
-  styleUrl: './app.css'
+  styleUrl: './app.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class App implements OnInit {
   private readonly http = inject(HttpClient);
@@ -29,8 +31,10 @@ export class App implements OnInit {
     this.workerMessage.set('');
     this.errorMessage.set('');
 
+    const endpoint = new URL('/api/hello', workerApiBaseUrl).toString();
+
     this.http
-      .get<{ message: string }>('/api/hello', { observe: 'response' })
+      .get<{ message: string }>(endpoint, { observe: 'response' })
       .subscribe({
         next: (response) => {
           this.requestStatus.set('success');
