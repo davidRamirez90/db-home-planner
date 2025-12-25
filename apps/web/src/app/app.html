@@ -1,128 +1,27 @@
-<main class="page">
-  <header class="hero">
-    <p class="eyebrow">DB Home Planner</p>
-    <h1>{{ title() }}</h1>
-    <p class="subtitle">
-      Search Deutsche Bahn stations to validate the worker API connection.
-    </p>
+<div class="app-shell">
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-eyebrow">Departures Board</span>
+      <h1>{{ title() }}</h1>
+    </div>
+    <nav class="header-actions" aria-label="Primary">
+      <a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Board
+      </a>
+      <details class="config-menu">
+        <summary aria-haspopup="menu" aria-label="Open configuration menu">
+          Config
+        </summary>
+        <div class="config-panel" role="menu">
+          <a class="nav-link" routerLink="/admin" routerLinkActive="active" role="menuitem">
+            Admin config
+          </a>
+        </div>
+      </details>
+    </nav>
   </header>
 
-  <section class="card">
-    <form class="station-form" [formGroup]="stationForm" (ngSubmit)="searchStations()">
-      <label class="field">
-        <span class="label">Station name or code</span>
-        <input
-          id="station-query"
-          type="text"
-          formControlName="stationQuery"
-          autocomplete="off"
-          placeholder="e.g., Berlin Hbf"
-          aria-describedby="station-help"
-        />
-      </label>
-      <p id="station-help" class="help">
-        Enter at least 2 characters (name, EVA, or DS100 code).
-      </p>
-      <div class="form-actions">
-        <button
-          type="submit"
-          class="refresh-button"
-          [disabled]="stationQuery.invalid || requestStatus() === 'loading'"
-        >
-          Search stations
-        </button>
-        <span class="status" [attr.data-status]="requestStatus()">
-          {{ requestStatus() }}
-        </span>
-      </div>
-    </form>
-    <div class="status-line">
-      <span class="label">HTTP status</span>
-      <span>{{ statusCode() ?? '—' }}</span>
-    </div>
-    <div class="response-log">
-      <span class="label">Latest response</span>
-      <pre class="response">{{ lastResponse() || '—' }}</pre>
-    </div>
-    <div class="debug-log">
-      <span class="label">Client log output</span>
-      <span class="log-output" role="log" aria-live="polite" aria-atomic="false">
-        {{ logOutput() || '—' }}
-      </span>
-    </div>
-
-    @if (requestStatus() === 'loading') {
-      <p class="loading">Searching stations…</p>
-    }
-    @if (errorMessage()) {
-      <p class="error">{{ errorMessage() }}</p>
-    }
-    @if (requestStatus() === 'success') {
-      @if (hasResults()) {
-        <ul class="results">
-          @for (station of stations(); track station.evaId) {
-            <li class="result">
-              <div class="result-header">
-                <div class="result-title">{{ station.name }}</div>
-                @if (trackedEvaIds().has(station.evaId)) {
-                  <span class="saved-label" aria-label="Station saved">Saved</span>
-                } @else {
-                  <button
-                    type="button"
-                    class="save-button"
-                    [disabled]="isSaving(station.evaId)"
-                    (click)="saveStation(station)"
-                  >
-                    {{ isSaving(station.evaId) ? 'Saving…' : 'Save station' }}
-                  </button>
-                }
-              </div>
-              <div class="result-meta">
-                <span>EVA {{ station.evaId }}</span>
-                @if (station.ds100) {
-                  <span>DS100 {{ station.ds100 }}</span>
-                }
-              </div>
-            </li>
-          }
-        </ul>
-      } @else {
-        <p class="empty">No stations found for "{{ lastQuery() }}".</p>
-      }
-    }
-  </section>
-
-  <section class="card">
-    <header class="section-header">
-      <h2>Tracked stations</h2>
-      <span class="status" [attr.data-status]="trackedRequestStatus()">
-        {{ trackedRequestStatus() }}
-      </span>
-    </header>
-    @if (trackedErrorMessage()) {
-      <p class="error">{{ trackedErrorMessage() }}</p>
-    }
-    @if (trackedRequestStatus() === 'loading') {
-      <p class="loading">Loading tracked stations…</p>
-    }
-    @if (trackedRequestStatus() === 'success') {
-      @if (hasTrackedStations()) {
-        <ul class="results">
-          @for (station of trackedStations(); track station.evaId) {
-            <li class="result">
-              <div class="result-title">{{ station.name }}</div>
-              <div class="result-meta">
-                <span>EVA {{ station.evaId }}</span>
-                @if (station.ds100) {
-                  <span>DS100 {{ station.ds100 }}</span>
-                }
-              </div>
-            </li>
-          }
-        </ul>
-      } @else {
-        <p class="empty">No tracked stations yet. Save a station from the search results.</p>
-      }
-    }
-  </section>
-</main>
+  <main class="app-content">
+    <router-outlet />
+  </main>
+</div>
