@@ -3,8 +3,8 @@
 A planning dashboard that tells you when to leave home to catch selected Deutsche Bahn departures, factoring in delays and cancellations. The UI will present departures in a station/airport-style board and suggest actions like “walk slowly,” “hurry,” or “wait for the next one.”
 
 ## Project goals
-- Track configured stations and specific trains.
-- Store travel-time profiles (slow/fast/custom) from home to station.
+- Track configured station + route + direction combinations.
+- Store travel-time profiles (slow/fast/custom) from home to tracked stations.
 - Fetch real-time departure data via Deutsche Bahn APIs.
 - Compute next departures, statuses (on time/delayed/cancelled), and guidance actions.
 - Host on Cloudflare’s free tiers (Pages, Workers, D1/KV/Queues as needed).

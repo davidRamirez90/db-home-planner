@@ -8,9 +8,10 @@
   - Full/recent changes (`/fchg/{evaNo}`, `/rchg/{evaNo}`)
 - Define the initial data model:
   - Stations (EVA, DS100, name)
+  - Route selection per station (trip labels, line, destination/direction)
   - Timetable stops (planned vs. changed events)
   - Travel time profiles (slow/fast/custom)
-  - User preferences
+  - User preferences (tracked station + route + direction)
 - Decide on refresh cadence for planned vs. change data and caching strategy.
 
 ## 2) Frontend foundations (Angular)
@@ -19,8 +20,9 @@
 - Create a departures-board component (static for now).
 - Define UX for:
   - Station selection (Timetables `/station/{pattern}`)
-  - Train selection
-  - Travel-time profile configuration
+  - Route + direction discovery for a station
+  - Route tracking selection per station
+  - Travel-time profile configuration per tracked route
 
 ## 3) Backend foundations (Cloudflare Workers)
 - Scaffold Worker in `workers/api`.
@@ -52,7 +54,7 @@
 
 ## 7) UI integration
 - Display departures board with real-time updates.
-- Show status and recommended action for each configured station/train.
+- Show status and recommended action for each tracked station + route + direction.
 - Add settings screens for configuration.
 
 ## 8) Observability & quality
