@@ -128,6 +128,11 @@ h1 {
   gap: 0.5rem;
 }
 
+.debug-log {
+  display: grid;
+  gap: 0.5rem;
+}
+
 .response {
   margin: 0;
   padding: 0.75rem 1rem;
@@ -138,6 +143,22 @@ h1 {
   color: var(--slate-800);
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.log-output {
+  display: block;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--slate-200);
+  background: var(--slate-100);
+  font-size: 0.8rem;
+  color: var(--slate-800);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 260px;
+  overflow: auto;
+  font-family: "SFMono-Regular", "Consolas", "Liberation Mono", "Menlo", monospace;
 }
 
 .label {

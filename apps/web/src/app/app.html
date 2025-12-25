@@ -44,6 +44,12 @@
       <span class="label">Latest response</span>
       <pre class="response">{{ lastResponse() || '—' }}</pre>
     </div>
+    <div class="debug-log">
+      <span class="label">Client log output</span>
+      <span class="log-output" role="log" aria-live="polite" aria-atomic="false">
+        {{ logOutput() || '—' }}
+      </span>
+    </div>
 
     @if (requestStatus() === 'loading') {
       <p class="loading">Searching stations…</p>
