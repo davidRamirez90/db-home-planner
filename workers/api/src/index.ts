@@ -25,6 +25,12 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
+    console.log("Incoming request", {
+      method: request.method,
+      pathname: url.pathname,
+      search: url.search,
+    });
+
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders });
     }
@@ -46,12 +52,20 @@ export default {
 
       const query = url.searchParams.get("query")?.trim();
 
+      console.log("Station lookup request", { query });
+
       if (!query) {
         return new Response(JSON.stringify({ error: "Missing query parameter." }), {
           status: 400,
           headers: jsonHeaders,
         });
       }
+
+      console.log("DB API env check", {
+        hasBaseUrl: Boolean(env.DB_API_BASE_URL),
+        hasClientId: Boolean(env.DB_API_CLIENT_ID),
+        hasApiKey: Boolean(env.DB_API_KEY),
+      });
 
       if (!env.DB_API_BASE_URL || !env.DB_API_KEY || !env.DB_API_CLIENT_ID) {
         return new Response(
@@ -69,11 +83,20 @@ export default {
       const basePath = apiUrl.pathname.replace(/\/$/, "");
       apiUrl.pathname = `${basePath}/station/${encodeURIComponent(query)}`;
 
+      console.log("Fetching station data", {
+        url: apiUrl.toString(),
+      });
+
       const stationResponse = await fetch(apiUrl.toString(), {
         headers: {
           "DB-Client-ID": env.DB_API_CLIENT_ID,
           "DB-Api-Key": env.DB_API_KEY,
         },
+      });
+
+      console.log("Station API response", {
+        status: stationResponse.status,
+        ok: stationResponse.ok,
       });
 
       if (!stationResponse.ok) {
@@ -94,6 +117,9 @@ export default {
       const document = parser.parseFromString(xmlPayload, "application/xml");
 
       if (document.querySelector("parsererror")) {
+        console.log("Station API XML parse error", {
+          payloadPreview: xmlPayload.slice(0, 200),
+        });
         return new Response(
           JSON.stringify({ error: "Unable to parse station response." }),
           { status: 502, headers: jsonHeaders },
@@ -105,6 +131,8 @@ export default {
         name: station.getAttribute("name") ?? "",
         ds100: station.getAttribute("ds100") || undefined,
       }));
+
+      console.log("Station API parsed results", { count: stations.length });
 
       return new Response(
         JSON.stringify({
