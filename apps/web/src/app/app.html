@@ -40,6 +40,10 @@
       <span class="label">HTTP status</span>
       <span>{{ statusCode() ?? '—' }}</span>
     </div>
+    <div class="response-log">
+      <span class="label">Latest response</span>
+      <pre class="response">{{ lastResponse() || '—' }}</pre>
+    </div>
 
     @if (requestStatus() === 'loading') {
       <p class="loading">Searching stations…</p>
