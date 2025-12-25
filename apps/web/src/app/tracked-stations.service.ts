@@ -29,11 +29,6 @@ export class TrackedStationsService {
       error: (error: HttpErrorResponse) => {
         this.errorMessage.set(error.message || 'Unable to load tracked stations.');
         this.requestStatus.set('error');
-        console.error('Tracked station load failed', {
-          status: error.status || null,
-          message: error.message,
-          error: error.error ?? null
-        });
       }
     });
   }
@@ -54,10 +49,6 @@ export class TrackedStationsService {
     } catch (error: unknown) {
       const message = `Invalid worker API base URL: ${workerApiBaseUrl}`;
       this.errorMessage.set(message);
-      console.error('Tracked station request failed: invalid worker API base URL', {
-        baseUrl: workerApiBaseUrl,
-        error
-      });
       return null;
     }
   }

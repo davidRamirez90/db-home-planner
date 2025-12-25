@@ -19,17 +19,23 @@
 - Establish routing and layout shell.
 - Create a departures-board component (static for now).
 - Define UX for:
-  - Station selection (Timetables `/station/{pattern}`)
-  - Route + direction discovery for a station
-  - Route tracking selection per station
-  - Travel-time profile configuration per tracked route
+  - ✅ Station selection (Timetables `/station/{pattern}`)
+  - ✅ Route + direction discovery for a station
+  - ✅ Route tracking selection per station
+  - ✅ Travel-time profile configuration per tracked route
 
 ## 3) Backend foundations (Cloudflare Workers)
 - Scaffold Worker in `workers/api`.
 - Define API endpoints:
-  - `GET /api/stations` (proxy `/station/{pattern}`)
+  - ✅ `GET /api/stations` (proxy `/station/{pattern}`)
   - `GET /api/departures` (plan + changes merge)
-  - `POST /api/travel-profiles`
+  - ✅ `GET /api/routes` (proxy `/plan/{evaNo}/{date}/{hour}` for route discovery)
+  - ✅ `GET /api/tracked-stations`
+  - ✅ `POST /api/tracked-stations`
+  - ✅ `GET /api/tracked-routes`
+  - ✅ `POST /api/tracked-routes`
+  - ✅ `GET /api/travel-times`
+  - ✅ `POST /api/travel-times`
 - Implement request validation and error handling.
 
 ## 4) Data storage layer

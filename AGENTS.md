@@ -65,3 +65,4 @@ DB Home Planner is a planning dashboard that recommends when to leave home for D
 ## Notes for agents
 - Look for additional `AGENTS.md` files in subdirectories; deeper instructions override this one.
 - Keep documentation updates minimal unless requested.
+- After making changes or implementing TODO items, update `TODOS.md` to reflect the latest status.
