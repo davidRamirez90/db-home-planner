@@ -26,6 +26,7 @@ type StationSearchResponse = {
 })
 export class App {
   private readonly http = inject(HttpClient);
+  private readonly maxLogEntries = 200;
 
   protected readonly title = signal('DB Home Planner');
   protected readonly requestStatus = signal<RequestState>('idle');
@@ -34,6 +35,7 @@ export class App {
   protected readonly stations = signal<StationResult[]>([]);
   protected readonly lastQuery = signal('');
   protected readonly lastResponse = signal('');
+  protected readonly logEntries = signal<string[]>([]);
 
   protected readonly stationQuery = new FormControl('', {
     nonNullable: true,
@@ -41,6 +43,11 @@ export class App {
   });
 
   protected readonly hasResults = computed(() => this.stations().length > 0);
+  protected readonly logOutput = computed(() => this.logEntries().join('\n'));
+
+  constructor() {
+    this.installLogCapture();
+  }
 
   protected searchStations(): void {
     const query = this.stationQuery.value.trim();
@@ -88,6 +95,60 @@ export class App {
   private stringifyResponse(value: unknown): string {
     try {
       return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  }
+
+  private installLogCapture(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const appendLog = (level: string, args: unknown[]): void => {
+      const timestamp = new Date().toISOString();
+      const formatted = args.map((value) => this.formatLogValue(value)).join(' ');
+      const message = `[${timestamp}] ${level.toUpperCase()}: ${formatted}`.trim();
+
+      this.logEntries.update((entries) => [...entries, message].slice(-this.maxLogEntries));
+    };
+
+    const methods = ['log', 'info', 'warn', 'error'] as const;
+
+    for (const method of methods) {
+      const original = console[method].bind(console);
+
+      console[method] = (...args: unknown[]) => {
+        original(...args);
+        appendLog(method, args);
+      };
+    }
+
+    window.addEventListener('error', (event) => {
+      appendLog('window.error', [
+        event.message,
+        event.filename ? `(${event.filename}:${event.lineno}:${event.colno})` : ''
+      ]);
+    });
+
+    window.addEventListener('unhandledrejection', (event) => {
+      appendLog('unhandledrejection', [event.reason]);
+    });
+
+    appendLog('debug', ['Client log capture initialized.']);
+  }
+
+  private formatLogValue(value: unknown): string {
+    if (value instanceof Error) {
+      return value.stack ? `${value.name}: ${value.message}\n${value.stack}` : `${value.name}: ${value.message}`;
+    }
+
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    try {
+      return JSON.stringify(value);
     } catch {
       return String(value);
     }
