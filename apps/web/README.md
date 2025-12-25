@@ -12,6 +12,10 @@ ng serve
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
+## Frontend change screenshots
+
+When you make a visual change in the frontend, capture an updated screenshot using Playwright and include it in the PR description so reviewers can see the UI impact quickly.
+
 ## Code scaffolding
 
 Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
