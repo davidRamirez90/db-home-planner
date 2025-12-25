@@ -3,37 +3,68 @@
     <p class="eyebrow">DB Home Planner</p>
     <h1>{{ title() }}</h1>
     <p class="subtitle">
-      Live connectivity check between the deployed page and the API worker.
+      Search Deutsche Bahn stations to validate the worker API connection.
     </p>
   </header>
 
   <section class="card">
-    <div class="status-actions">
-      <button
-        type="button"
-        class="refresh-button"
-        (click)="refreshStatus()"
-        [disabled]="requestStatus() === 'loading'"
-      >
-        Refresh status
-      </button>
-    </div>
-    <div class="status-line">
-      <span class="label">Request status</span>
-      <span class="status" [attr.data-status]="requestStatus()">
-        {{ requestStatus() }}
-      </span>
-    </div>
+    <form class="station-form" (ngSubmit)="searchStations()">
+      <label class="field">
+        <span class="label">Station name or code</span>
+        <input
+          id="station-query"
+          type="text"
+          [formControl]="stationQuery"
+          autocomplete="off"
+          placeholder="e.g., Berlin Hbf"
+          aria-describedby="station-help"
+        />
+      </label>
+      <p id="station-help" class="help">
+        Enter at least 2 characters (name, EVA, or DS100 code).
+      </p>
+      <div class="form-actions">
+        <button
+          type="submit"
+          class="refresh-button"
+          [disabled]="stationQuery.invalid || requestStatus() === 'loading'"
+        >
+          Search stations
+        </button>
+        <span class="status" [attr.data-status]="requestStatus()">
+          {{ requestStatus() }}
+        </span>
+      </div>
+    </form>
     <div class="status-line">
       <span class="label">HTTP status</span>
       <span>{{ statusCode() ?? '—' }}</span>
     </div>
-    <div class="status-line">
-      <span class="label">Worker response</span>
-      <span>{{ workerMessage() || 'Waiting for response...' }}</span>
-    </div>
+
+    @if (requestStatus() === 'loading') {
+      <p class="loading">Searching stations…</p>
+    }
     @if (errorMessage()) {
       <p class="error">{{ errorMessage() }}</p>
+    }
+    @if (requestStatus() === 'success') {
+      @if (hasResults()) {
+        <ul class="results">
+          @for (station of stations(); track station.evaId) {
+            <li class="result">
+              <div class="result-title">{{ station.name }}</div>
+              <div class="result-meta">
+                <span>EVA {{ station.evaId }}</span>
+                @if (station.ds100) {
+                  <span>DS100 {{ station.ds100 }}</span>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="empty">No stations found for "{{ lastQuery() }}".</p>
+      }
     }
   </section>
 </main>
