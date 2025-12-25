@@ -1,45 +1,71 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { workerApiBaseUrl } from './api-config';
+
+type RequestState = 'idle' | 'loading' | 'success' | 'error';
+
+type StationResult = {
+  evaId: string;
+  name: string;
+  ds100?: string;
+};
+
+type StationSearchResponse = {
+  query: string;
+  count: number;
+  stations: StationResult[];
+};
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [ReactiveFormsModule]
 })
-export class App implements OnInit {
+export class App {
   private readonly http = inject(HttpClient);
 
   protected readonly title = signal('DB Home Planner');
-  protected readonly requestStatus = signal<'idle' | 'loading' | 'success' | 'error'>('idle');
+  protected readonly requestStatus = signal<RequestState>('idle');
   protected readonly statusCode = signal<number | null>(null);
-  protected readonly workerMessage = signal('');
   protected readonly errorMessage = signal('');
+  protected readonly stations = signal<StationResult[]>([]);
+  protected readonly lastQuery = signal('');
 
-  ngOnInit(): void {
-    this.fetchWorkerStatus();
-  }
+  protected readonly stationQuery = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required, Validators.minLength(2)]
+  });
 
-  protected refreshStatus(): void {
-    this.fetchWorkerStatus();
-  }
+  protected readonly hasResults = computed(() => this.stations().length > 0);
 
-  private fetchWorkerStatus(): void {
+  protected searchStations(): void {
+    const query = this.stationQuery.value.trim();
+
+    if (!query) {
+      this.errorMessage.set('Enter a station name or code to search.');
+      this.requestStatus.set('error');
+      return;
+    }
+
     this.requestStatus.set('loading');
     this.statusCode.set(null);
-    this.workerMessage.set('');
     this.errorMessage.set('');
+    this.stations.set([]);
+    this.lastQuery.set(query);
 
-    const endpoint = new URL('/api/hello', workerApiBaseUrl).toString();
+    const endpoint = new URL('/api/stations', workerApiBaseUrl);
+    endpoint.searchParams.set('query', query);
 
     this.http
-      .get<{ message: string }>(endpoint, { observe: 'response' })
+      .get<StationSearchResponse>(endpoint.toString(), { observe: 'response' })
       .subscribe({
         next: (response) => {
           this.requestStatus.set('success');
           this.statusCode.set(response.status);
-          this.workerMessage.set(response.body?.message ?? 'No message returned.');
+          this.stations.set(response.body?.stations ?? []);
         },
         error: (error: HttpErrorResponse) => {
           this.requestStatus.set('error');
