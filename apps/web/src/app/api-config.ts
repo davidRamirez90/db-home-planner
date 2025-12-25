@@ -2,7 +2,13 @@ type AppConfig = {
   workerApiBaseUrl?: string;
 };
 
-const fallbackWorkerApiBaseUrl = 'https://db-home-planner-api.<your-account>.workers.dev';
+const fallbackWorkerApiBaseUrl = (() => {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+
+  return 'http://localhost:8787';
+})();
 
 const readAppConfig = (): AppConfig | null => {
   const configValue = (globalThis as { __APP_CONFIG__?: unknown }).__APP_CONFIG__;
@@ -26,4 +32,19 @@ const readAppConfig = (): AppConfig | null => {
 
 const resolvedWorkerApiBaseUrl = readAppConfig()?.workerApiBaseUrl?.trim();
 
-export const workerApiBaseUrl = resolvedWorkerApiBaseUrl || fallbackWorkerApiBaseUrl;
+const isValidBaseUrl = (value: string | undefined): value is string => {
+  if (!value) {
+    return false;
+  }
+
+  try {
+    new URL('/', value);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const workerApiBaseUrl = isValidBaseUrl(resolvedWorkerApiBaseUrl)
+  ? resolvedWorkerApiBaseUrl
+  : fallbackWorkerApiBaseUrl;

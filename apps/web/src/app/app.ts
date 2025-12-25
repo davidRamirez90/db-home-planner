@@ -47,6 +47,7 @@ export class App {
 
   constructor() {
     this.installLogCapture();
+    console.info('Worker API base URL resolved', { baseUrl: workerApiBaseUrl });
   }
 
   protected searchStations(): void {
@@ -65,16 +66,18 @@ export class App {
     this.lastQuery.set(query);
     this.lastResponse.set('');
 
-    const endpoint = new URL('/api/stations', workerApiBaseUrl);
-    endpoint.searchParams.set('query', query);
+    const endpoint = this.buildStationEndpoint(query);
+    if (!endpoint) {
+      return;
+    }
 
     console.info('Station lookup started', {
       query,
-      endpoint: endpoint.toString()
+      endpoint
     });
 
     this.http
-      .get<StationSearchResponse>(endpoint.toString(), { observe: 'response' })
+      .get<StationSearchResponse>(endpoint, { observe: 'response' })
       .subscribe({
         next: (response) => {
           this.requestStatus.set('success');
@@ -111,6 +114,31 @@ export class App {
       return JSON.stringify(value, null, 2);
     } catch {
       return String(value);
+    }
+  }
+
+  private buildStationEndpoint(query: string): string | null {
+    try {
+      const endpoint = new URL('/api/stations', workerApiBaseUrl);
+      endpoint.searchParams.set('query', query);
+      return endpoint.toString();
+    } catch (error: unknown) {
+      const message = `Invalid worker API base URL: ${workerApiBaseUrl}`;
+      this.requestStatus.set('error');
+      this.statusCode.set(null);
+      this.errorMessage.set(message);
+      this.lastResponse.set(
+        this.stringifyResponse({
+          status: null,
+          message,
+          error: this.formatLogValue(error)
+        })
+      );
+      console.error('Station lookup failed: invalid worker API base URL', {
+        baseUrl: workerApiBaseUrl,
+        error
+      });
+      return null;
     }
   }
 
