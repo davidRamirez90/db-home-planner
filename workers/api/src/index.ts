@@ -21,6 +21,42 @@ const notFound = () =>
     headers: jsonHeaders,
   });
 
+type StationAttributes = {
+  evaId: string;
+  name: string;
+  ds100?: string;
+};
+
+const parseStationsFromXml = (xmlPayload: string): StationAttributes[] => {
+  const stations: StationAttributes[] = [];
+  const stationMatches = xmlPayload.matchAll(/<station\s+([^>]+?)\/?>/gi);
+
+  for (const match of stationMatches) {
+    const attributeBlock = match[1] ?? "";
+    const attributes: Record<string, string> = {};
+
+    for (const attributeMatch of attributeBlock.matchAll(/([\w-]+)\s*=\s*"([^"]*)"/g)) {
+      const key = attributeMatch[1];
+      const value = attributeMatch[2] ?? "";
+      if (key) {
+        attributes[key] = value;
+      }
+    }
+
+    if (!attributes.eva && !attributes.name && !attributes.ds100) {
+      continue;
+    }
+
+    stations.push({
+      evaId: attributes.eva ?? "",
+      name: attributes.name ?? "",
+      ds100: attributes.ds100 || undefined,
+    });
+  }
+
+  return stations;
+};
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -144,24 +180,13 @@ export default {
         preview: xmlPayload.slice(0, 120),
       });
 
-      const parser = new DOMParser();
-      const document = parser.parseFromString(xmlPayload, "application/xml");
+      const stations = parseStationsFromXml(xmlPayload);
 
-      if (document.querySelector("parsererror")) {
-        console.log("Station API XML parse error", {
+      if (!stations.length) {
+        console.log("Station API XML parse yielded no stations", {
           payloadPreview: xmlPayload.slice(0, 200),
         });
-        return new Response(
-          JSON.stringify({ error: "Unable to parse station response." }),
-          { status: 502, headers: jsonHeaders },
-        );
       }
-
-      const stations = Array.from(document.querySelectorAll("station")).map((station) => ({
-        evaId: station.getAttribute("eva") ?? "",
-        name: station.getAttribute("name") ?? "",
-        ds100: station.getAttribute("ds100") || undefined,
-      }));
 
       console.log("Station API parsed results", {
         count: stations.length,
