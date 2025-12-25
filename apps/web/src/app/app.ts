@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { workerApiBaseUrl } from './api-config';
 
 type RequestState = 'idle' | 'loading' | 'success' | 'error';
@@ -40,6 +40,9 @@ export class App {
   protected readonly stationQuery = new FormControl('', {
     nonNullable: true,
     validators: [Validators.required, Validators.minLength(2)]
+  });
+  protected readonly stationForm = new FormGroup({
+    stationQuery: this.stationQuery
   });
 
   protected readonly hasResults = computed(() => this.stations().length > 0);

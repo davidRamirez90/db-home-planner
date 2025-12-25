@@ -8,13 +8,13 @@
   </header>
 
   <section class="card">
-    <form class="station-form" (ngSubmit)="searchStations()">
+    <form class="station-form" [formGroup]="stationForm" (ngSubmit)="searchStations()">
       <label class="field">
         <span class="label">Station name or code</span>
         <input
           id="station-query"
           type="text"
-          [formControl]="stationQuery"
+          formControlName="stationQuery"
           autocomplete="off"
           placeholder="e.g., Berlin Hbf"
           aria-describedby="station-help"
