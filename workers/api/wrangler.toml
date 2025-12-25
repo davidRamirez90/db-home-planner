@@ -6,14 +6,14 @@ compatibility_date = "2024-09-25"
 DB_API_BASE_URL = "https://apis.deutschebahn.com/db-api-marketplace/apis/timetables/v1"
 
 [[d1_databases]]
-binding = "DB_HOME_PLANNER_DB"
+binding = "D1_DB_PLANNER"
 database_name = "d1_db_homeplanner"
-database_id = "2ed8a449-feec-4d4e-84"
+database_id = "2ed8a449-feec-4d4e-845f-2e6d32ab7d5e"
 
 [[kv_namespaces]]
-binding = "DB_HOME_PLANNER_CACHE"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
-preview_id = "REPLACE_WITH_KV_NAMESPACE_ID"
+binding = "KV_DB_PLANNER"
+id = "f1e35ba056854b999f6f6f1ef853b3d3"
+preview_id = "f1e35ba056854b999f6f6f1ef853b3d3"
 
 [dev]
 port = 8787
