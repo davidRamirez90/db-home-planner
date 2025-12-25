@@ -17,5 +17,3 @@ const publicDir = path.resolve(scriptsDir, '..', 'public');
 
 await mkdir(publicDir, { recursive: true });
 await writeFile(path.join(publicDir, 'env.js'), envPayload, 'utf8');
-
-console.log(`Wrote env.js with workerApiBaseUrl=${workerApiBaseUrl}`);

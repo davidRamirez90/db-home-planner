@@ -36,20 +36,6 @@
         </span>
       </div>
     </form>
-    <div class="status-line">
-      <span class="label">HTTP status</span>
-      <span>{{ statusCode() ?? '—' }}</span>
-    </div>
-    <div class="response-log">
-      <span class="label">Latest response</span>
-      <pre class="response">{{ lastResponse() || '—' }}</pre>
-    </div>
-    <div class="debug-log">
-      <span class="label">Client log output</span>
-      <span class="log-output" role="log" aria-live="polite" aria-atomic="false">
-        {{ logOutput() || '—' }}
-      </span>
-    </div>
 
     @if (requestStatus() === 'loading') {
       <p class="loading">Searching stations…</p>
@@ -125,6 +111,173 @@
         </ul>
       } @else {
         <p class="empty">No tracked stations yet. Save a station from the search results.</p>
+      }
+    }
+  </section>
+
+  <section class="card">
+    <header class="section-header">
+      <h3>Routes & travel times</h3>
+      <span class="status" [attr.data-status]="trackedRoutesRequestStatus()">
+        {{ trackedRoutesRequestStatus() }}
+      </span>
+    </header>
+    @if (!hasTrackedStations()) {
+      <p class="empty">Track a station first to discover available routes.</p>
+    } @else {
+      <label class="field">
+        <span class="label">Tracked station</span>
+        <select
+          id="tracked-station"
+          class="select"
+          [value]="selectedStationEvaId()"
+          (change)="selectStation($event)"
+        >
+          @for (station of trackedStations(); track station.evaId) {
+            <option [value]="station.evaId">
+              {{ station.name }} ({{ station.evaId }})
+            </option>
+          }
+        </select>
+      </label>
+
+      <div class="route-actions">
+        <button
+          type="button"
+          class="refresh-button"
+          [disabled]="!selectedStation() || routeRequestStatus() === 'loading'"
+          (click)="discoverRoutes()"
+        >
+          Discover routes
+        </button>
+        <span class="status" [attr.data-status]="routeRequestStatus()">
+          {{ routeRequestStatus() }}
+        </span>
+      </div>
+
+      @if (routeRequestStatus() === 'loading') {
+        <p class="loading">Fetching routes for {{ selectedStation()?.name }}…</p>
+      }
+      @if (routeErrorMessage()) {
+        <p class="error">{{ routeErrorMessage() }}</p>
+      }
+      @if (routeRequestStatus() === 'success') {
+        @if (hasDiscoveredRoutes()) {
+          <ul class="results">
+            @for (route of discoveredRoutes(); track route.line + route.direction) {
+              <li class="result">
+                <div class="result-header">
+                  <div>
+                    <div class="result-title">{{ route.line }}</div>
+                    <div class="result-meta">
+                      <span>{{ route.direction }}</span>
+                    </div>
+                  </div>
+                  @if (trackedRouteKeys().has((route.line + '::' + route.direction).toLowerCase())) {
+                    <span class="saved-label" aria-label="Route tracked">Tracked</span>
+                  } @else {
+                    <button
+                      type="button"
+                      class="save-button"
+                      [disabled]="isTrackingRoute(route)"
+                      (click)="trackRoute(route)"
+                    >
+                      {{ isTrackingRoute(route) ? 'Saving…' : 'Track route' }}
+                    </button>
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="empty">No routes found for {{ selectedStation()?.name }} yet.</p>
+        }
+      }
+
+      <div class="section-divider"></div>
+
+      <header class="section-header">
+        <h4>Tracked routes & travel times</h4>
+      </header>
+      @if (trackedRoutesErrorMessage()) {
+        <p class="error">{{ trackedRoutesErrorMessage() }}</p>
+      }
+      @if (trackedRoutesRequestStatus() === 'loading') {
+        <p class="loading">Loading tracked routes…</p>
+      }
+      @if (trackedRoutesRequestStatus() === 'success') {
+        @if (hasTrackedRoutes()) {
+          <ul class="results">
+            @for (route of trackedRoutes(); track route.id) {
+              <li class="result">
+                <div class="result-header">
+                  <div>
+                    <div class="result-title">{{ route.line }}</div>
+                    <div class="result-meta">
+                      <span>{{ route.direction }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="travel-times">
+                  <div class="travel-times-header">Travel times</div>
+                  @if (travelTimeStatus(route.id) === 'loading') {
+                    <p class="loading">Loading travel times…</p>
+                  }
+                  @if (travelTimeError(route.id)) {
+                    <p class="error">{{ travelTimeError(route.id) }}</p>
+                  }
+                  @if (travelTimeStatus(route.id) === 'success') {
+                    @if (travelTimes(route.id).length > 0) {
+                      <ul class="travel-time-list">
+                        @for (time of travelTimes(route.id); track time.id) {
+                          <li>
+                            <strong>{{ time.label }}</strong>
+                            <span>{{ time.minutes }} min</span>
+                          </li>
+                        }
+                      </ul>
+                    } @else {
+                      <p class="empty">No travel times configured yet.</p>
+                    }
+                  }
+                  <div class="travel-time-form">
+                    <label class="field">
+                      <span class="label">Label</span>
+                      <input
+                        #labelInput
+                        type="text"
+                        [value]="travelTimeDraft(route.id).label"
+                        placeholder="e.g., Fast walk"
+                        (input)="updateTravelTimeLabel(route.id, labelInput.value)"
+                      />
+                    </label>
+                    <label class="field">
+                      <span class="label">Minutes</span>
+                      <input
+                        #minutesInput
+                        type="number"
+                        min="1"
+                        [value]="travelTimeDraft(route.id).minutes"
+                        placeholder="10"
+                        (input)="updateTravelTimeMinutes(route.id, minutesInput.value)"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      class="save-button"
+                      [disabled]="savingTravelTimeRouteIds().includes(route.id)"
+                      (click)="saveTravelTime(route)"
+                    >
+                      {{ savingTravelTimeRouteIds().includes(route.id) ? 'Saving…' : 'Save travel time' }}
+                    </button>
+                  </div>
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="empty">No tracked routes yet for {{ selectedStation()?.name }}.</p>
+        }
       }
     }
   </section>

@@ -1,7 +1,9 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { workerApiBaseUrl } from './api-config';
+import { RouteTrackingService } from './route-tracking.service';
+import { RouteCandidate, SaveTrackedRouteResponse, SaveTravelTimeResponse, TrackedRoute, TravelTime } from './route-types';
 import { RequestState, SaveStationResponse, StationResult, StationSearchResponse } from './station-types';
 import { TrackedStationsService } from './tracked-stations.service';
 
@@ -15,17 +17,27 @@ import { TrackedStationsService } from './tracked-stations.service';
 export class AdminConfigComponent {
   private readonly http = inject(HttpClient);
   private readonly trackedStationsService = inject(TrackedStationsService);
-  private readonly maxLogEntries = 200;
+  private readonly routeTrackingService = inject(RouteTrackingService);
 
   protected readonly requestStatus = signal<RequestState>('idle');
-  protected readonly statusCode = signal<number | null>(null);
   protected readonly errorMessage = signal('');
   protected readonly saveErrorMessage = signal('');
   protected readonly stations = signal<StationResult[]>([]);
   protected readonly savingEvaIds = signal<string[]>([]);
   protected readonly lastQuery = signal('');
-  protected readonly lastResponse = signal('');
-  protected readonly logEntries = signal<string[]>([]);
+  protected readonly selectedStationEvaId = signal('');
+  protected readonly discoveredRoutes = signal<RouteCandidate[]>([]);
+  protected readonly routeRequestStatus = signal<RequestState>('idle');
+  protected readonly routeErrorMessage = signal('');
+  protected readonly trackedRoutes = signal<TrackedRoute[]>([]);
+  protected readonly trackedRoutesRequestStatus = signal<RequestState>('idle');
+  protected readonly trackedRoutesErrorMessage = signal('');
+  protected readonly savingRouteKeys = signal<string[]>([]);
+  protected readonly travelTimesByRouteId = signal<Record<string, TravelTime[]>>({});
+  protected readonly travelTimeRequestStatusByRoute = signal<Record<string, RequestState>>({});
+  protected readonly travelTimeErrorMessageByRoute = signal<Record<string, string>>({});
+  protected readonly travelTimeDrafts = signal<Record<string, { label: string; minutes: string }>>({});
+  protected readonly savingTravelTimeRouteIds = signal<string[]>([]);
 
   protected readonly trackedRequestStatus = this.trackedStationsService.requestStatus;
   protected readonly trackedErrorMessage = this.trackedStationsService.errorMessage;
@@ -42,19 +54,52 @@ export class AdminConfigComponent {
   protected readonly hasResults = computed(() => this.stations().length > 0);
   protected readonly hasTrackedStations = computed(() => this.trackedStations().length > 0);
   protected readonly trackedEvaIds = computed(() => new Set(this.trackedStations().map((station) => station.evaId)));
-  protected readonly logOutput = computed(() => this.logEntries().join('\n'));
+  protected readonly hasDiscoveredRoutes = computed(() => this.discoveredRoutes().length > 0);
+  protected readonly hasTrackedRoutes = computed(() => this.trackedRoutes().length > 0);
+  protected readonly trackedRouteKeys = computed(
+    () => new Set(this.trackedRoutes().map((route) => this.routeKey(route.line, route.direction)))
+  );
+  protected readonly selectedStation = computed(() =>
+    this.trackedStations().find((station) => station.evaId === this.selectedStationEvaId()) ?? null
+  );
 
   constructor() {
-    this.installLogCapture();
-    console.info('Worker API base URL resolved', { baseUrl: workerApiBaseUrl });
     this.trackedStationsService.loadTrackedStations();
+    effect(() => {
+      const stations = this.trackedStations();
+      const selected = this.selectedStationEvaId();
+      if (stations.length === 0) {
+        this.selectedStationEvaId.set('');
+        this.discoveredRoutes.set([]);
+        this.trackedRoutes.set([]);
+        this.trackedRoutesRequestStatus.set('idle');
+        this.trackedRoutesErrorMessage.set('');
+        return;
+      }
+      if (!selected || !stations.some((station) => station.evaId === selected)) {
+        this.selectedStationEvaId.set(stations[0]?.evaId ?? '');
+      }
+    });
+    effect(() => {
+      const evaId = this.selectedStationEvaId();
+      if (!evaId) {
+        this.trackedRoutes.set([]);
+        this.trackedRoutesRequestStatus.set('idle');
+        this.trackedRoutesErrorMessage.set('');
+        return;
+      }
+      this.loadTrackedRoutes(evaId);
+    });
+    effect(() => {
+      for (const route of this.trackedRoutes()) {
+        if (!this.travelTimesByRouteId()[route.id]) {
+          this.loadTravelTimes(route.id);
+        }
+      }
+    });
   }
 
   protected searchStations(): void {
-    console.info('searchStations invoked', {
-      value: this.stationQuery.value,
-      valid: this.stationQuery.valid
-    });
     const query = this.stationQuery.value.trim();
 
     if (!query) {
@@ -64,51 +109,25 @@ export class AdminConfigComponent {
     }
 
     this.requestStatus.set('loading');
-    this.statusCode.set(null);
     this.errorMessage.set('');
     this.stations.set([]);
     this.lastQuery.set(query);
-    this.lastResponse.set('');
 
     const endpoint = this.buildStationEndpoint(query);
     if (!endpoint) {
       return;
     }
 
-    console.info('Station lookup started', {
-      query,
-      endpoint
-    });
-
     this.http
       .get<StationSearchResponse>(endpoint, { observe: 'response' })
       .subscribe({
         next: (response) => {
           this.requestStatus.set('success');
-          this.statusCode.set(response.status);
           this.stations.set(response.body?.stations ?? []);
-          this.lastResponse.set(this.stringifyResponse({ status: response.status, body: response.body ?? null }));
-          console.info('Station lookup success', {
-            status: response.status,
-            count: response.body?.stations?.length ?? 0
-          });
         },
         error: (error: HttpErrorResponse) => {
           this.requestStatus.set('error');
-          this.statusCode.set(error.status || null);
           this.errorMessage.set(error.message || 'Unable to reach the worker.');
-          this.lastResponse.set(
-            this.stringifyResponse({
-              status: error.status || null,
-              message: error.message,
-              error: error.error ?? null
-            })
-          );
-          console.error('Station lookup failed', {
-            status: error.status || null,
-            message: error.message,
-            error: error.error ?? null
-          });
         }
       });
   }
@@ -135,11 +154,6 @@ export class AdminConfigComponent {
       },
       error: (error: HttpErrorResponse) => {
         this.saveErrorMessage.set(error.message || 'Unable to save tracked station.');
-        console.error('Tracked station save failed', {
-          status: error.status || null,
-          message: error.message,
-          error: error.error ?? null
-        });
         this.savingEvaIds.update((ids) => ids.filter((id) => id !== station.evaId));
       },
       complete: () => {
@@ -152,11 +166,200 @@ export class AdminConfigComponent {
     return this.savingEvaIds().includes(evaId);
   }
 
-  private stringifyResponse(value: unknown): string {
+  protected selectStation(event: Event): void {
+    const value = (event.target as HTMLSelectElement | null)?.value ?? '';
+    this.selectedStationEvaId.set(value);
+    this.discoveredRoutes.set([]);
+    this.routeRequestStatus.set('idle');
+    this.routeErrorMessage.set('');
+  }
+
+  protected discoverRoutes(): void {
+    const evaId = this.selectedStationEvaId();
+    if (!evaId) {
+      this.routeErrorMessage.set('Choose a tracked station first.');
+      this.routeRequestStatus.set('error');
+      return;
+    }
+
+    this.routeRequestStatus.set('loading');
+    this.routeErrorMessage.set('');
+    this.discoveredRoutes.set([]);
+
     try {
-      return JSON.stringify(value, null, 2);
-    } catch {
-      return String(value);
+      this.routeTrackingService.discoverRoutes(evaId).subscribe({
+        next: (response) => {
+          this.discoveredRoutes.set(response.routes ?? []);
+          this.routeRequestStatus.set('success');
+        },
+        error: (error: HttpErrorResponse) => {
+          this.routeErrorMessage.set(error.message || 'Unable to discover routes.');
+          this.routeRequestStatus.set('error');
+        }
+      });
+    } catch (error: unknown) {
+      this.routeErrorMessage.set(error instanceof Error ? error.message : 'Unable to reach the worker.');
+      this.routeRequestStatus.set('error');
+    }
+  }
+
+  protected trackRoute(route: RouteCandidate): void {
+    const evaId = this.selectedStationEvaId();
+    if (!evaId || this.isTrackingRoute(route)) {
+      return;
+    }
+
+    this.savingRouteKeys.update((keys) => [...keys, this.routeKey(route.line, route.direction)]);
+
+    try {
+      this.routeTrackingService
+        .trackRoute({ stationEvaId: evaId, line: route.line, direction: route.direction })
+        .subscribe({
+          next: (response: SaveTrackedRouteResponse) => {
+            if (response?.route) {
+              this.trackedRoutes.update((routes) => this.mergeTrackedRoute(routes, response.route));
+            }
+          },
+          error: (error: HttpErrorResponse) => {
+            this.trackedRoutesErrorMessage.set(error.message || 'Unable to save tracked route.');
+            this.savingRouteKeys.update((keys) =>
+              keys.filter((key) => key !== this.routeKey(route.line, route.direction))
+            );
+          },
+          complete: () => {
+            this.savingRouteKeys.update((keys) =>
+              keys.filter((key) => key !== this.routeKey(route.line, route.direction))
+            );
+          }
+        });
+    } catch (error: unknown) {
+      this.trackedRoutesErrorMessage.set(error instanceof Error ? error.message : 'Unable to reach the worker.');
+      this.savingRouteKeys.update((keys) =>
+        keys.filter((key) => key !== this.routeKey(route.line, route.direction))
+      );
+    }
+  }
+
+  protected isTrackingRoute(route: RouteCandidate): boolean {
+    return this.savingRouteKeys().includes(this.routeKey(route.line, route.direction));
+  }
+
+  protected loadTrackedRoutes(evaId: string): void {
+    this.trackedRoutesRequestStatus.set('loading');
+    this.trackedRoutesErrorMessage.set('');
+
+    try {
+      this.routeTrackingService.loadTrackedRoutes(evaId).subscribe({
+        next: (response) => {
+          this.trackedRoutes.set(response.routes ?? []);
+          this.trackedRoutesRequestStatus.set('success');
+        },
+        error: (error: HttpErrorResponse) => {
+          this.trackedRoutesErrorMessage.set(error.message || 'Unable to load tracked routes.');
+          this.trackedRoutesRequestStatus.set('error');
+        }
+      });
+    } catch (error: unknown) {
+      this.trackedRoutesErrorMessage.set(error instanceof Error ? error.message : 'Unable to reach the worker.');
+      this.trackedRoutesRequestStatus.set('error');
+    }
+  }
+
+  protected travelTimes(routeId: string): TravelTime[] {
+    return this.travelTimesByRouteId()[routeId] ?? [];
+  }
+
+  protected travelTimeStatus(routeId: string): RequestState {
+    return this.travelTimeRequestStatusByRoute()[routeId] ?? 'idle';
+  }
+
+  protected travelTimeError(routeId: string): string {
+    return this.travelTimeErrorMessageByRoute()[routeId] ?? '';
+  }
+
+  protected travelTimeDraft(routeId: string): { label: string; minutes: string } {
+    return this.travelTimeDrafts()[routeId] ?? { label: '', minutes: '' };
+  }
+
+  protected updateTravelTimeLabel(routeId: string, value: string): void {
+    this.travelTimeDrafts.update((drafts) => ({
+      ...drafts,
+      [routeId]: { ...this.travelTimeDraft(routeId), label: value }
+    }));
+  }
+
+  protected updateTravelTimeMinutes(routeId: string, value: string): void {
+    this.travelTimeDrafts.update((drafts) => ({
+      ...drafts,
+      [routeId]: { ...this.travelTimeDraft(routeId), minutes: value }
+    }));
+  }
+
+  protected saveTravelTime(route: TrackedRoute): void {
+    const draft = this.travelTimeDraft(route.id);
+    const minutes = Number(draft.minutes);
+
+    if (!draft.label.trim() || Number.isNaN(minutes) || minutes <= 0) {
+      this.travelTimeErrorMessageByRoute.update((errors) => ({
+        ...errors,
+        [route.id]: 'Enter a label and a positive number of minutes.'
+      }));
+      return;
+    }
+
+    if (this.savingTravelTimeRouteIds().includes(route.id)) {
+      return;
+    }
+
+    this.savingTravelTimeRouteIds.update((ids) => [...ids, route.id]);
+    this.travelTimeErrorMessageByRoute.update((errors) => ({
+      ...errors,
+      [route.id]: ''
+    }));
+
+    try {
+      this.routeTrackingService
+        .saveTravelTime({ routeId: route.id, label: draft.label.trim(), minutes })
+        .subscribe({
+          next: (response: SaveTravelTimeResponse) => {
+            if (response?.time) {
+              this.travelTimesByRouteId.update((times) => {
+                const current = times[route.id] ?? [];
+                const existingIndex = current.findIndex((entry) => entry.label === response.time.label);
+                const next = [...current];
+                if (existingIndex >= 0) {
+                  next[existingIndex] = response.time;
+                } else {
+                  next.push(response.time);
+                }
+                return {
+                  ...times,
+                  [route.id]: next.sort((a, b) => a.minutes - b.minutes)
+                };
+              });
+              this.travelTimeDrafts.update((drafts) => ({
+                ...drafts,
+                [route.id]: { label: '', minutes: '' }
+              }));
+            }
+          },
+          error: (error: HttpErrorResponse) => {
+            this.travelTimeErrorMessageByRoute.update((errors) => ({
+              ...errors,
+              [route.id]: error.message || 'Unable to save travel time.'
+            }));
+            this.savingTravelTimeRouteIds.update((ids) => ids.filter((id) => id !== route.id));
+          },
+          complete: () => {
+            this.savingTravelTimeRouteIds.update((ids) => ids.filter((id) => id !== route.id));
+          }
+        });
+    } catch (error: unknown) {
+      this.travelTimeErrorMessageByRoute.update((errors) => ({
+        ...errors,
+        [route.id]: error instanceof Error ? error.message : 'Unable to reach the worker.'
+      }));
+      this.savingTravelTimeRouteIds.update((ids) => ids.filter((id) => id !== route.id));
     }
   }
 
@@ -168,19 +371,7 @@ export class AdminConfigComponent {
     } catch (error: unknown) {
       const message = `Invalid worker API base URL: ${workerApiBaseUrl}`;
       this.requestStatus.set('error');
-      this.statusCode.set(null);
       this.errorMessage.set(message);
-      this.lastResponse.set(
-        this.stringifyResponse({
-          status: null,
-          message,
-          error: this.formatLogValue(error)
-        })
-      );
-      console.error('Station lookup failed: invalid worker API base URL', {
-        baseUrl: workerApiBaseUrl,
-        error
-      });
       return null;
     }
   }
@@ -192,65 +383,68 @@ export class AdminConfigComponent {
     } catch (error: unknown) {
       const message = `Invalid worker API base URL: ${workerApiBaseUrl}`;
       this.saveErrorMessage.set(message);
-      console.error('Tracked station request failed: invalid worker API base URL', {
-        baseUrl: workerApiBaseUrl,
-        error
-      });
       return null;
     }
   }
 
-  private installLogCapture(): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const appendLog = (level: string, args: unknown[]): void => {
-      const timestamp = new Date().toISOString();
-      const formatted = args.map((value) => this.formatLogValue(value)).join(' ');
-      const message = `[${timestamp}] ${level.toUpperCase()}: ${formatted}`.trim();
-
-      this.logEntries.update((entries) => [...entries, message].slice(-this.maxLogEntries));
-    };
-
-    const methods = ['log', 'info', 'warn', 'error'] as const;
-
-    for (const method of methods) {
-      const original = console[method].bind(console);
-
-      console[method] = (...args: unknown[]) => {
-        original(...args);
-        appendLog(method, args);
-      };
-    }
-
-    window.addEventListener('error', (event) => {
-      appendLog('window.error', [
-        event.message,
-        event.filename ? `(${event.filename}:${event.lineno}:${event.colno})` : ''
-      ]);
-    });
-
-    window.addEventListener('unhandledrejection', (event) => {
-      appendLog('unhandledrejection', [event.reason]);
-    });
-
-    appendLog('debug', ['Client log capture initialized.']);
-  }
-
-  private formatLogValue(value: unknown): string {
-    if (value instanceof Error) {
-      return value.stack ? `${value.name}: ${value.message}\n${value.stack}` : `${value.name}: ${value.message}`;
-    }
-
-    if (typeof value === 'string') {
-      return value;
-    }
+  private loadTravelTimes(routeId: string): void {
+    this.travelTimeRequestStatusByRoute.update((statuses) => ({
+      ...statuses,
+      [routeId]: 'loading'
+    }));
+    this.travelTimeErrorMessageByRoute.update((errors) => ({
+      ...errors,
+      [routeId]: ''
+    }));
 
     try {
-      return JSON.stringify(value);
-    } catch {
-      return String(value);
+      this.routeTrackingService.loadTravelTimes(routeId).subscribe({
+        next: (response) => {
+          this.travelTimesByRouteId.update((times) => ({
+            ...times,
+            [routeId]: response.times ?? []
+          }));
+          this.travelTimeRequestStatusByRoute.update((statuses) => ({
+            ...statuses,
+            [routeId]: 'success'
+          }));
+        },
+        error: (error: HttpErrorResponse) => {
+          this.travelTimeErrorMessageByRoute.update((errors) => ({
+            ...errors,
+            [routeId]: error.message || 'Unable to load travel times.'
+          }));
+          this.travelTimeRequestStatusByRoute.update((statuses) => ({
+            ...statuses,
+            [routeId]: 'error'
+          }));
+        }
+      });
+    } catch (error: unknown) {
+      this.travelTimeErrorMessageByRoute.update((errors) => ({
+        ...errors,
+        [routeId]: error instanceof Error ? error.message : 'Unable to reach the worker.'
+      }));
+      this.travelTimeRequestStatusByRoute.update((statuses) => ({
+        ...statuses,
+        [routeId]: 'error'
+      }));
     }
+  }
+
+  private mergeTrackedRoute(routes: TrackedRoute[], route: TrackedRoute): TrackedRoute[] {
+    if (routes.some((entry) => entry.id === route.id)) {
+      return routes;
+    }
+    return [...routes, route].sort((a, b) => {
+      if (a.line === b.line) {
+        return a.direction.localeCompare(b.direction);
+      }
+      return a.line.localeCompare(b.line);
+    });
+  }
+
+  private routeKey(line: string, direction: string): string {
+    return `${line}::${direction}`.toLowerCase();
   }
 }
