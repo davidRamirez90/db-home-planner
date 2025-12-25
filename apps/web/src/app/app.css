@@ -1,0 +1,143 @@
+:host {
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-500: #64748b;
+  --slate-800: #1f2937;
+  --accent: #2563eb;
+
+  display: block;
+  min-height: 100vh;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  color: var(--slate-800);
+  background: linear-gradient(180deg, #f8fafc, #ffffff);
+}
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem 3rem;
+  display: grid;
+  gap: 2rem;
+}
+
+.hero {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+h1 {
+  margin: 0;
+  font-size: 2.5rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--slate-500);
+  font-size: 1rem;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid var(--slate-200);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  display: grid;
+  gap: 1rem;
+}
+
+.status-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.refresh-button {
+  border: 1px solid var(--slate-200);
+  border-radius: 999px;
+  padding: 0.4rem 1rem;
+  background: #ffffff;
+  color: var(--slate-800);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.refresh-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.refresh-button:disabled {
+  cursor: not-allowed;
+  color: var(--slate-500);
+}
+
+.status-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.95rem;
+}
+
+.label {
+  color: var(--slate-500);
+}
+
+.status {
+  font-weight: 600;
+  text-transform: capitalize;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.status[data-status='loading'] {
+  background: #fef3c7;
+  border-color: #fcd34d;
+  color: #92400e;
+}
+
+.status[data-status='success'] {
+  background: #dcfce7;
+  border-color: #22c55e;
+  color: #166534;
+}
+
+.status[data-status='error'] {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+.status[data-status='idle'] {
+  background: var(--slate-100);
+  border-color: var(--slate-200);
+  color: var(--slate-500);
+}
+
+.error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding-top: 3rem;
+  }
+
+  .status-line {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
