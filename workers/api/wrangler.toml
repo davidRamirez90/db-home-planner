@@ -12,7 +12,8 @@ database_id = "2ed8a449-feec-4d4e-84"
 
 [[kv_namespaces]]
 binding = "DB_HOME_PLANNER_CACHE"
-id = "DB_HOME_PLANNER_CACHE"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+preview_id = "REPLACE_WITH_KV_NAMESPACE_ID"
 
 [dev]
 port = 8787
