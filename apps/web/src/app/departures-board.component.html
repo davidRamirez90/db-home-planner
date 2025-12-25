@@ -1,0 +1,42 @@
+<section class="board" aria-label="Departures board">
+  <header class="board-header">
+    <div class="board-title">
+      <span class="board-icon" aria-hidden="true">✈</span>
+      <span>{{ boardTitle() }}</span>
+    </div>
+    <div class="board-meta">
+      <span class="board-label">Status</span>
+      <span class="board-status" [attr.data-status]="requestStatus()">
+        {{ requestStatus() }}
+      </span>
+    </div>
+  </header>
+
+  @if (errorMessage()) {
+    <p class="board-error">{{ errorMessage() }}</p>
+  }
+
+  <div class="board-grid" role="table" aria-label="Departures overview">
+    <div class="board-row board-row--header" role="row">
+      <span class="board-cell" role="columnheader">Station</span>
+      <span class="board-cell" role="columnheader">Time</span>
+      <span class="board-cell" role="columnheader">Line</span>
+      <span class="board-cell" role="columnheader">Destination</span>
+      <span class="board-cell" role="columnheader">Platform</span>
+      <span class="board-cell" role="columnheader">Status</span>
+      <span class="board-cell" role="columnheader">Action</span>
+    </div>
+
+    @for (row of boardRows(); track $index) {
+      <div class="board-row" role="row">
+        <span class="board-cell" role="cell">{{ row.station }}</span>
+        <span class="board-cell" role="cell">{{ row.departure }}</span>
+        <span class="board-cell" role="cell">{{ row.line }}</span>
+        <span class="board-cell" role="cell">{{ row.destination }}</span>
+        <span class="board-cell" role="cell">{{ row.platform }}</span>
+        <span class="board-cell" role="cell">{{ row.status }}</span>
+        <span class="board-cell" role="cell">{{ row.action }}</span>
+      </div>
+    }
+  </div>
+</section>
