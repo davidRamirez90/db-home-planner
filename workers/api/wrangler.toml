@@ -2,11 +2,6 @@ name = "db-home-planner-api"
 main = "src/index.ts"
 compatibility_date = "2024-09-25"
 
-[vars]
-DB_API_KEY = ""
-DB_API_BASE_URL = ""
-DB_API_CLIENT_ID = ""
-
 [dev]
 port = 8787
 
