@@ -51,6 +51,10 @@ export class App {
   }
 
   protected searchStations(): void {
+    console.info('searchStations invoked', {
+      value: this.stationQuery.value,
+      valid: this.stationQuery.valid
+    });
     const query = this.stationQuery.value.trim();
 
     if (!query) {
