@@ -5,6 +5,14 @@ compatibility_date = "2024-09-25"
 [vars]
 DB_API_BASE_URL = "https://apis.deutschebahn.com/db-api-marketplace/apis/timetables/v1"
 
+[[d1_databases]]
+binding = "DB_HOME_PLANNER_DB"
+database_name = "d1_db_homeplanner"
+
+[[kv_namespaces]]
+binding = "DB_HOME_PLANNER_CACHE"
+id = "DB_HOME_PLANNER_CACHE"
+
 [dev]
 port = 8787
 
