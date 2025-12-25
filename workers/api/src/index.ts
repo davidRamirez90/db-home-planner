@@ -87,16 +87,29 @@ export default {
         url: apiUrl.toString(),
       });
 
-      const stationResponse = await fetch(apiUrl.toString(), {
-        headers: {
-          "DB-Client-ID": env.DB_API_CLIENT_ID,
-          "DB-Api-Key": env.DB_API_KEY,
-        },
-      });
+      let stationResponse: Response;
+
+      try {
+        stationResponse = await fetch(apiUrl.toString(), {
+          headers: {
+            "DB-Client-ID": env.DB_API_CLIENT_ID,
+            "DB-Api-Key": env.DB_API_KEY,
+          },
+        });
+      } catch (error) {
+        console.error("Station API fetch failed", {
+          message: error instanceof Error ? error.message : String(error),
+        });
+        return new Response(
+          JSON.stringify({ error: "Unable to reach station API." }),
+          { status: 502, headers: jsonHeaders },
+        );
+      }
 
       console.log("Station API response", {
         status: stationResponse.status,
         ok: stationResponse.ok,
+        contentType: stationResponse.headers.get("content-type"),
       });
 
       if (!stationResponse.ok) {
@@ -112,7 +125,25 @@ export default {
         );
       }
 
-      const xmlPayload = await stationResponse.text();
+      let xmlPayload = "";
+
+      try {
+        xmlPayload = await stationResponse.text();
+      } catch (error) {
+        console.error("Station API read failed", {
+          message: error instanceof Error ? error.message : String(error),
+        });
+        return new Response(
+          JSON.stringify({ error: "Unable to read station response." }),
+          { status: 502, headers: jsonHeaders },
+        );
+      }
+
+      console.log("Station API payload received", {
+        bytes: xmlPayload.length,
+        preview: xmlPayload.slice(0, 120),
+      });
+
       const parser = new DOMParser();
       const document = parser.parseFromString(xmlPayload, "application/xml");
 
@@ -132,7 +163,10 @@ export default {
         ds100: station.getAttribute("ds100") || undefined,
       }));
 
-      console.log("Station API parsed results", { count: stations.length });
+      console.log("Station API parsed results", {
+        count: stations.length,
+        sample: stations.slice(0, 3),
+      });
 
       return new Response(
         JSON.stringify({

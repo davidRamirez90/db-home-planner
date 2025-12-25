@@ -68,6 +68,11 @@ export class App {
     const endpoint = new URL('/api/stations', workerApiBaseUrl);
     endpoint.searchParams.set('query', query);
 
+    console.info('Station lookup started', {
+      query,
+      endpoint: endpoint.toString()
+    });
+
     this.http
       .get<StationSearchResponse>(endpoint.toString(), { observe: 'response' })
       .subscribe({
@@ -76,6 +81,10 @@ export class App {
           this.statusCode.set(response.status);
           this.stations.set(response.body?.stations ?? []);
           this.lastResponse.set(this.stringifyResponse({ status: response.status, body: response.body ?? null }));
+          console.info('Station lookup success', {
+            status: response.status,
+            count: response.body?.stations?.length ?? 0
+          });
         },
         error: (error: HttpErrorResponse) => {
           this.requestStatus.set('error');
@@ -88,6 +97,11 @@ export class App {
               error: error.error ?? null
             })
           );
+          console.error('Station lookup failed', {
+            status: error.status || null,
+            message: error.message,
+            error: error.error ?? null
+          });
         }
       });
   }
