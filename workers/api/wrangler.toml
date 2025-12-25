@@ -8,6 +8,7 @@ DB_API_BASE_URL = "https://apis.deutschebahn.com/db-api-marketplace/apis/timetab
 [[d1_databases]]
 binding = "DB_HOME_PLANNER_DB"
 database_name = "d1_db_homeplanner"
+database_id = "2ed8a449-feec-4d4e-84"
 
 [[kv_namespaces]]
 binding = "DB_HOME_PLANNER_CACHE"
