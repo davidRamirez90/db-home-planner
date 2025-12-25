@@ -17,6 +17,15 @@ type StationSearchResponse = {
   stations: StationResult[];
 };
 
+type TrackedStationsResponse = {
+  count: number;
+  stations: StationResult[];
+};
+
+type SaveStationResponse = {
+  station: StationResult;
+};
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.html',
@@ -30,9 +39,13 @@ export class App {
 
   protected readonly title = signal('DB Home Planner');
   protected readonly requestStatus = signal<RequestState>('idle');
+  protected readonly trackedRequestStatus = signal<RequestState>('idle');
   protected readonly statusCode = signal<number | null>(null);
   protected readonly errorMessage = signal('');
+  protected readonly trackedErrorMessage = signal('');
   protected readonly stations = signal<StationResult[]>([]);
+  protected readonly trackedStations = signal<StationResult[]>([]);
+  protected readonly savingEvaIds = signal<string[]>([]);
   protected readonly lastQuery = signal('');
   protected readonly lastResponse = signal('');
   protected readonly logEntries = signal<string[]>([]);
@@ -46,11 +59,14 @@ export class App {
   });
 
   protected readonly hasResults = computed(() => this.stations().length > 0);
+  protected readonly hasTrackedStations = computed(() => this.trackedStations().length > 0);
+  protected readonly trackedEvaIds = computed(() => new Set(this.trackedStations().map((station) => station.evaId)));
   protected readonly logOutput = computed(() => this.logEntries().join('\n'));
 
   constructor() {
     this.installLogCapture();
     console.info('Worker API base URL resolved', { baseUrl: workerApiBaseUrl });
+    this.loadTrackedStations();
   }
 
   protected searchStations(): void {
@@ -116,6 +132,50 @@ export class App {
       });
   }
 
+  protected saveStation(station: StationResult): void {
+    if (this.isSaving(station.evaId) || this.trackedEvaIds().has(station.evaId)) {
+      return;
+    }
+
+    this.trackedErrorMessage.set('');
+    this.savingEvaIds.update((ids) => [...new Set([...ids, station.evaId])]);
+
+    const endpoint = this.buildTrackedStationsEndpoint();
+    if (!endpoint) {
+      this.savingEvaIds.update((ids) => ids.filter((id) => id !== station.evaId));
+      return;
+    }
+
+    this.http.post<SaveStationResponse>(endpoint, station).subscribe({
+      next: (response) => {
+        if (response?.station) {
+          this.trackedStations.update((stations) => {
+            if (stations.some((saved) => saved.evaId === response.station.evaId)) {
+              return stations;
+            }
+            return [...stations, response.station].sort((a, b) => a.name.localeCompare(b.name));
+          });
+        }
+      },
+      error: (error: HttpErrorResponse) => {
+        this.trackedErrorMessage.set(error.message || 'Unable to save tracked station.');
+        console.error('Tracked station save failed', {
+          status: error.status || null,
+          message: error.message,
+          error: error.error ?? null
+        });
+        this.savingEvaIds.update((ids) => ids.filter((id) => id !== station.evaId));
+      },
+      complete: () => {
+        this.savingEvaIds.update((ids) => ids.filter((id) => id !== station.evaId));
+      }
+    });
+  }
+
+  protected isSaving(evaId: string): boolean {
+    return this.savingEvaIds().includes(evaId);
+  }
+
   private stringifyResponse(value: unknown): string {
     try {
       return JSON.stringify(value, null, 2);
@@ -142,6 +202,48 @@ export class App {
         })
       );
       console.error('Station lookup failed: invalid worker API base URL', {
+        baseUrl: workerApiBaseUrl,
+        error
+      });
+      return null;
+    }
+  }
+
+  private loadTrackedStations(): void {
+    this.trackedRequestStatus.set('loading');
+    this.trackedErrorMessage.set('');
+
+    const endpoint = this.buildTrackedStationsEndpoint();
+    if (!endpoint) {
+      this.trackedRequestStatus.set('error');
+      return;
+    }
+
+    this.http.get<TrackedStationsResponse>(endpoint).subscribe({
+      next: (response) => {
+        this.trackedStations.set(response.stations ?? []);
+        this.trackedRequestStatus.set('success');
+      },
+      error: (error: HttpErrorResponse) => {
+        this.trackedErrorMessage.set(error.message || 'Unable to load tracked stations.');
+        this.trackedRequestStatus.set('error');
+        console.error('Tracked station load failed', {
+          status: error.status || null,
+          message: error.message,
+          error: error.error ?? null
+        });
+      }
+    });
+  }
+
+  private buildTrackedStationsEndpoint(): string | null {
+    try {
+      const endpoint = new URL('/api/tracked-stations', workerApiBaseUrl);
+      return endpoint.toString();
+    } catch (error: unknown) {
+      const message = `Invalid worker API base URL: ${workerApiBaseUrl}`;
+      this.trackedErrorMessage.set(message);
+      console.error('Tracked station request failed: invalid worker API base URL', {
         baseUrl: workerApiBaseUrl,
         error
       });
