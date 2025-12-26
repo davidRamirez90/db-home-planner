@@ -16,6 +16,10 @@
     <p class="board-error">{{ errorMessage() }}</p>
   }
 
+  @if (!errorMessage() && requestStatus() === 'success' && boardRows().length === 0) {
+    <p class="board-empty">No tracked routes yet. Add one in the admin config.</p>
+  }
+
   <div class="board-grid" role="table" aria-label="Departures overview">
     <div class="board-row board-row--header" role="row">
       <span class="board-cell" role="columnheader">Station</span>

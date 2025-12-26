@@ -28,7 +28,7 @@
 - Scaffold Worker in `workers/api`.
 - Define API endpoints:
   - ✅ `GET /api/stations` (proxy `/station/{pattern}`)
-  - `GET /api/departures` (plan + changes merge)
+  - ✅ `GET /api/departures` (plan + changes merge)
   - ✅ `GET /api/routes` (proxy `/plan/{evaNo}/{date}/{hour}` for route discovery)
   - ✅ `GET /api/tracked-stations`
   - ✅ `POST /api/tracked-stations`
@@ -59,7 +59,7 @@
   - “Wait for next one”
 
 ## 7) UI integration
-- Display departures board with real-time updates.
+- ✅ Display departures board with live departures data.
 - Show status and recommended action for each tracked station + route + direction.
 - Add settings screens for configuration.
 
