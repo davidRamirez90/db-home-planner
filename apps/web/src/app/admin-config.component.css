@@ -56,6 +56,7 @@
   border: 1px solid #cfc5b2;
   font-size: 1rem;
   background: #fffdfa;
+  color: #1b1a16;
 }
 
 .field input:focus {
@@ -108,6 +109,11 @@
   border: 1px solid #cfc5b2;
   font-size: 1rem;
   background: #fffdfa;
+  color: #1b1a16;
+}
+
+.select option {
+  color: #1b1a16;
 }
 
 .select:focus {
