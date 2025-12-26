@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DeparturesService } from './departures.service';
+import { SegmentDisplayComponent } from './segment-display.component';
 
 @Component({
   selector: 'app-departures-board',
   templateUrl: './departures-board.component.html',
   styleUrl: './departures-board.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [SegmentDisplayComponent]
 })
 export class DeparturesBoardComponent {
   private readonly departuresService = inject(DeparturesService);
@@ -26,6 +28,14 @@ export class DeparturesBoardComponent {
       action: departure.action
     }));
   });
+
+  protected toChars(value: string): string[] {
+    if (!value) {
+      return [' '];
+    }
+
+    return Array.from(value);
+  }
 
   constructor() {
     this.departuresService.loadDepartures();
