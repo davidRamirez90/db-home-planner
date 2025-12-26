@@ -103,7 +103,10 @@ const parseRoutesFromPlanXml = (xmlPayload: string): RouteCandidate[] => {
     const attributeBlock = match[2] ?? "";
     const attributes = parseAttributesFromXml(attributeBlock);
     const line = attributes.l?.trim() || attributes.n?.trim();
-    const direction = attributes.dir?.trim() || attributes.d?.trim();
+    const rawPath = attributes.ppth?.trim();
+    const parsedPathDirection = rawPath?.split("|").filter(Boolean).at(-1)?.trim();
+    const direction =
+      attributes.dir?.trim() || attributes.d?.trim() || parsedPathDirection || undefined;
 
     if (!line || !direction) {
       continue;
