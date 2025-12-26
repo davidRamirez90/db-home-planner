@@ -1,0 +1,80 @@
+:host {
+  display: inline-flex;
+}
+
+.segment-display {
+  position: relative;
+  width: 0.85em;
+  height: 1.4em;
+}
+
+.segment {
+  position: absolute;
+  background: rgba(247, 231, 177, 0.18);
+  border-radius: 999px;
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.4);
+  transition: background 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+  opacity: 0.35;
+}
+
+.segment--active {
+  background: #f7e7b1;
+  box-shadow: 0 0 10px rgba(247, 231, 177, 0.45);
+  opacity: 1;
+}
+
+.segment-a,
+.segment-d,
+.segment-g {
+  left: 0.15em;
+  right: 0.15em;
+  height: 0.18em;
+}
+
+.segment-a {
+  top: 0.08em;
+}
+
+.segment-g {
+  top: 0.61em;
+}
+
+.segment-d {
+  bottom: 0.08em;
+}
+
+.segment-b,
+.segment-c,
+.segment-e,
+.segment-f {
+  width: 0.18em;
+  height: 0.5em;
+}
+
+.segment-b {
+  top: 0.16em;
+  right: 0.05em;
+}
+
+.segment-c {
+  bottom: 0.16em;
+  right: 0.05em;
+}
+
+.segment-f {
+  top: 0.16em;
+  left: 0.05em;
+}
+
+.segment-e {
+  bottom: 0.16em;
+  left: 0.05em;
+}
+
+.segment-dp {
+  width: 0.16em;
+  height: 0.16em;
+  border-radius: 50%;
+  right: -0.05em;
+  bottom: 0.05em;
+}
