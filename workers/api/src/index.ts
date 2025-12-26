@@ -317,13 +317,11 @@ export default {
         return jsonResponse({ error: "Unable to read plan response." }, { status: 502 });
       }
 
-      if (shouldLogPlan) {
-        console.log("Plan API response body", {
-          evaId,
-          status: planResponse.status,
-          body: xmlPayload,
-        });
-      }
+      console.log("Plan API response body", {
+        evaId,
+        status: planResponse.status,
+        body: xmlPayload,
+      });
 
       const routes = parseRoutesFromPlanXml(xmlPayload);
 
