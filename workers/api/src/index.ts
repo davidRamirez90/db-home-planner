@@ -13,7 +13,6 @@ type Env = {
   DB_API_BASE_URL: string;
   DB_API_KEY: string;
   DB_API_CLIENT_ID: string;
-  DB_API_PLAN_LOG_EVA_ID?: string;
   D1_DB_PLANNER: D1Database;
 };
 
@@ -257,12 +256,6 @@ export default {
       const fallback = getBerlinDateHour();
       const date = dateParam ?? fallback.date;
       const hour = hourParam ?? fallback.hour;
-      const logEvaIds = (env.DB_API_PLAN_LOG_EVA_ID ?? "")
-        .split(",")
-        .map((value) => value.trim())
-        .filter(Boolean);
-      const shouldLogPlan = logEvaIds.includes(evaId);
-
       if (!isValidDateParam(date) || !isValidHourParam(hour)) {
         return jsonResponse(
           {
@@ -279,14 +272,12 @@ export default {
       let planResponse: Response;
 
       try {
-        if (shouldLogPlan) {
-          console.log("Plan API request", {
-            evaId,
-            date,
-            hour,
-            url: apiUrl.toString(),
-          });
-        }
+        console.log("Plan API request", {
+          evaId,
+          date,
+          hour,
+          url: apiUrl.toString(),
+        });
 
         planResponse = await fetch(apiUrl.toString(), {
           headers: {
@@ -302,12 +293,10 @@ export default {
       }
 
       if (!planResponse.ok) {
-        if (shouldLogPlan) {
-          console.log("Plan API response error", {
-            evaId,
-            status: planResponse.status,
-          });
-        }
+        console.log("Plan API response error", {
+          evaId,
+          status: planResponse.status,
+        });
         return jsonResponse(
           {
             error: "Failed to fetch planned departures.",
