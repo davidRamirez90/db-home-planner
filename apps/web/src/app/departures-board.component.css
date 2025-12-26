@@ -66,6 +66,12 @@
   font-weight: 600;
 }
 
+.board-empty {
+  margin: 0 0 1rem;
+  color: #d1c7b1;
+  font-weight: 600;
+}
+
 .board-grid {
   display: grid;
   gap: 0.4rem;
