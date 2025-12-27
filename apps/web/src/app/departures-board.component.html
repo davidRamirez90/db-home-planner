@@ -4,11 +4,19 @@
       <span class="board-icon" aria-hidden="true">✈</span>
       <span>{{ boardTitle() }}</span>
     </div>
-    <div class="board-meta">
-      <span class="board-label">STATUS</span>
-      <span class="board-status" [attr.data-status]="requestStatus()">
-        {{ displayStatus() }}
-      </span>
+    <div class="board-right">
+      <div class="board-meta">
+        <span class="board-label">STATUS</span>
+        <span class="board-status" [attr.data-status]="requestStatus()">
+          {{ displayStatus() }}
+        </span>
+      </div>
+      <div class="board-clock" aria-hidden="true">
+        @for (char of toChars(displayClock()); track $index; let i = $index) {
+          <app-segment-display [value]="char" [delayMs]="i * 20" />
+        }
+      </div>
+      <span class="sr-only">CURRENT TIME {{ displayClock() }}</span>
     </div>
   </header>
 

@@ -31,6 +31,7 @@ export class DeparturesBoardComponent {
   private readonly now = signal(Date.now());
 
   protected readonly displayStatus = computed(() => this.requestStatus().toUpperCase());
+  protected readonly displayClock = computed(() => this.formatClock(this.now()));
 
   protected readonly displayErrorMessage = computed(() => {
     const message = this.errorMessage();
@@ -96,6 +97,13 @@ export class DeparturesBoardComponent {
     const countdownHours = Math.floor(totalMinutes / MINUTES_PER_HOUR);
     const countdownMinutes = totalMinutes % MINUTES_PER_HOUR;
     return `${countdownHours}H ${countdownMinutes.toString().padStart(2, '0')}M`;
+  }
+
+  private formatClock(now: number): string {
+    const current = new Date(now);
+    const hours = current.getHours().toString().padStart(2, '0');
+    const minutes = current.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
   }
 
   constructor() {
