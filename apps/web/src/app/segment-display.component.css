@@ -42,8 +42,8 @@
 .split-flap__panel--bottom {
   bottom: 0;
   border-top: none;
-  align-items: flex-start;
-  padding-top: 0.05em;
+  align-items: flex-end;
+  padding-bottom: 0.05em;
 }
 
 .split-flap__flip {
@@ -72,8 +72,8 @@
   top: 0;
   transform-origin: bottom;
   border-bottom: none;
-  align-items: flex-end;
-  padding-bottom: 0.05em;
+  align-items: flex-start;
+  padding-top: 0.05em;
 }
 
 .split-flap__flip-bottom {
@@ -81,8 +81,8 @@
   transform-origin: top;
   border-top: none;
   transform: rotateX(90deg);
-  align-items: flex-start;
-  padding-top: 0.05em;
+  align-items: flex-end;
+  padding-bottom: 0.05em;
 }
 
 .split-flap__flip--a .split-flap__flip-top {
