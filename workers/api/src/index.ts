@@ -36,14 +36,16 @@ type TrackedStationRow = {
 
 type RouteCandidate = {
   line: string;
-  direction: string;
+  origin: string;
+  destination: string;
 };
 
 type TrackedRouteRow = {
   id: string;
   station_eva_id: string;
   line: string;
-  direction: string;
+  origin: string;
+  destination: string;
 };
 
 type TrackedRouteStationRow = {
@@ -51,7 +53,8 @@ type TrackedRouteStationRow = {
   station_eva_id: string;
   station_name: string;
   line: string;
-  direction: string;
+  origin: string;
+  destination: string;
 };
 
 type TravelTimeRow = {
@@ -64,7 +67,8 @@ type TravelTimeRow = {
 type PlanStop = {
   id: string;
   line: string;
-  direction: string;
+  origin: string;
+  destination: string;
   plannedTime: string;
   platform: string;
 };
@@ -85,15 +89,40 @@ const jsonResponse = (payload: unknown, init?: ResponseInit) =>
 const parseAttributesFromXml = (attributeBlock: string): Record<string, string> => {
   const attributes: Record<string, string> = {};
 
-  for (const attributeMatch of attributeBlock.matchAll(/([\w-]+)\s*=\s*"([^"]*)"/g)) {
+  for (const attributeMatch of attributeBlock.matchAll(/([\w-]+)\s*=\s*(['"])(.*?)\2/g)) {
     const key = attributeMatch[1];
-    const value = attributeMatch[2] ?? "";
+    const value = attributeMatch[3] ?? "";
     if (key) {
       attributes[key] = value;
     }
   }
 
   return attributes;
+};
+
+const parseTimetableStationName = (xmlPayload: string): string | undefined => {
+  const timetableMatch = xmlPayload.match(/<timetable\s+([^>]+?)>/i);
+  const attributes = parseAttributesFromXml(timetableMatch?.[1] ?? "");
+  const stationName = attributes.station?.trim();
+  return stationName || undefined;
+};
+
+const parsePathSegments = (rawPath?: string): string[] => {
+  if (!rawPath) {
+    return [];
+  }
+  return rawPath
+    .split("|")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+};
+
+const parsePathEndpoint = (rawPath?: string, position: "first" | "last"): string | undefined => {
+  const segments = parsePathSegments(rawPath);
+  if (!segments.length) {
+    return undefined;
+  }
+  return position === "first" ? segments[0] : segments[segments.length - 1];
 };
 
 const parseStationsFromXml = (xmlPayload: string): StationAttributes[] => {
@@ -120,30 +149,26 @@ const parseStationsFromXml = (xmlPayload: string): StationAttributes[] => {
 
 const parseRoutesFromPlanXml = (xmlPayload: string): RouteCandidate[] => {
   const routes = new Map<string, RouteCandidate>();
-  const routeMatches = xmlPayload.matchAll(/<(dp|ar)\s+([^>]+?)\/?>/gi);
+  const stops = parsePlanStopsFromXml(xmlPayload);
 
-  for (const match of routeMatches) {
-    const attributeBlock = match[2] ?? "";
-    const attributes = parseAttributesFromXml(attributeBlock);
-    const line = attributes.l?.trim() || attributes.n?.trim();
-    const rawPath = attributes.ppth?.trim();
-    const parsedPathDirection = rawPath?.split("|").filter(Boolean).at(-1)?.trim();
-    const direction =
-      attributes.dir?.trim() || attributes.d?.trim() || parsedPathDirection || undefined;
-
-    if (!line || !direction) {
+  for (const stop of stops) {
+    if (!stop.origin || !stop.destination) {
       continue;
     }
 
-    const key = `${line}::${direction}`.toLowerCase();
+    const key = `${stop.line}::${stop.origin}::${stop.destination}`.toLowerCase();
     if (!routes.has(key)) {
-      routes.set(key, { line, direction });
+      routes.set(key, { line: stop.line, origin: stop.origin, destination: stop.destination });
     }
   }
 
   return Array.from(routes.values()).sort((a, b) => {
     if (a.line === b.line) {
-      return a.direction.localeCompare(b.direction);
+      const destinationComparison = a.destination.localeCompare(b.destination);
+      if (destinationComparison !== 0) {
+        return destinationComparison;
+      }
+      return a.origin.localeCompare(b.origin);
     }
     return a.line.localeCompare(b.line);
   });
@@ -235,6 +260,7 @@ const formatDisplayTime = (value?: string): string => {
 
 const parsePlanStopsFromXml = (xmlPayload: string): PlanStop[] => {
   const stops: PlanStop[] = [];
+  const stationName = parseTimetableStationName(xmlPayload);
   const stopMatches = xmlPayload.matchAll(/<s\s+([^>]+)>([\s\S]*?)<\/s>/gi);
 
   for (const match of stopMatches) {
@@ -252,21 +278,23 @@ const parsePlanStopsFromXml = (xmlPayload: string): PlanStop[] => {
 
     const departureAttributes = parseAttributesFromXml(departureMatch[1] ?? "");
     const line = departureAttributes.l?.trim() || departureAttributes.n?.trim();
-    const rawPath = departureAttributes.ppth?.trim();
-    const parsedPathDirection = rawPath?.split("|").filter(Boolean).at(-1)?.trim();
-    const direction =
-      departureAttributes.dir?.trim() || departureAttributes.d?.trim() || parsedPathDirection || "";
+    const destination = parsePathEndpoint(departureAttributes.ppth?.trim(), "last") || "";
     const plannedTime = departureAttributes.pt?.trim() || departureAttributes.pdt?.trim() || "";
     const platform = departureAttributes.pp?.trim() || departureAttributes.p?.trim() || "";
 
-    if (!line || !direction || !plannedTime) {
+    if (!line || !destination || !plannedTime) {
       continue;
     }
+
+    const arrivalMatch = stopBody.match(/<ar\s+([^>]+?)\/?>/i);
+    const arrivalAttributes = parseAttributesFromXml(arrivalMatch?.[1] ?? "");
+    const origin = parsePathEndpoint(arrivalAttributes.ppth?.trim(), "first") || stationName || "";
 
     stops.push({
       id,
       line,
-      direction,
+      origin,
+      destination,
       plannedTime,
       platform,
     });
@@ -556,17 +584,18 @@ export default {
         const evaId = url.searchParams.get("evaId")?.trim();
         const statement = evaId
           ? env.D1_DB_PLANNER.prepare(
-              "SELECT id, station_eva_id, line, direction FROM tracked_routes WHERE station_eva_id = ?1 ORDER BY line, direction",
+              "SELECT id, station_eva_id, line, origin, destination FROM tracked_routes WHERE station_eva_id = ?1 ORDER BY line, destination, origin",
             ).bind(evaId)
           : env.D1_DB_PLANNER.prepare(
-              "SELECT id, station_eva_id, line, direction FROM tracked_routes ORDER BY station_eva_id, line, direction",
+              "SELECT id, station_eva_id, line, origin, destination FROM tracked_routes ORDER BY station_eva_id, line, destination, origin",
             );
         const result = await statement.all<TrackedRouteRow>();
         const routes = (result.results ?? []).map((row) => ({
           id: row.id,
           stationEvaId: row.station_eva_id,
           line: row.line,
-          direction: row.direction,
+          origin: row.origin,
+          destination: row.destination,
         }));
 
         return jsonResponse({
@@ -576,10 +605,20 @@ export default {
       }
 
       if (request.method === "POST") {
-        let payload: { stationEvaId?: string; line?: string; direction?: string } | null = null;
+        let payload: {
+          stationEvaId?: string;
+          line?: string;
+          origin?: string;
+          destination?: string;
+        } | null = null;
 
         try {
-          payload = (await request.json()) as { stationEvaId?: string; line?: string; direction?: string };
+          payload = (await request.json()) as {
+            stationEvaId?: string;
+            line?: string;
+            origin?: string;
+            destination?: string;
+          };
         } catch (error) {
           console.error("Tracked route payload parse failed", {
             message: error instanceof Error ? error.message : String(error),
@@ -588,9 +627,10 @@ export default {
 
         const stationEvaId = payload?.stationEvaId?.trim();
         const line = payload?.line?.trim();
-        const direction = payload?.direction?.trim();
+        const origin = payload?.origin?.trim();
+        const destination = payload?.destination?.trim();
 
-        if (!stationEvaId || !line || !direction) {
+        if (!stationEvaId || !line || !origin || !destination) {
           return jsonResponse(
             {
               error: "Missing required route details.",
@@ -600,9 +640,9 @@ export default {
         }
 
         const existing = await env.D1_DB_PLANNER.prepare(
-          "SELECT id, station_eva_id, line, direction FROM tracked_routes WHERE station_eva_id = ?1 AND line = ?2 AND direction = ?3",
+          "SELECT id, station_eva_id, line, origin, destination FROM tracked_routes WHERE station_eva_id = ?1 AND line = ?2 AND origin = ?3 AND destination = ?4",
         )
-          .bind(stationEvaId, line, direction)
+          .bind(stationEvaId, line, origin, destination)
           .first<TrackedRouteRow>();
 
         if (existing) {
@@ -611,17 +651,18 @@ export default {
               id: existing.id,
               stationEvaId: existing.station_eva_id,
               line: existing.line,
-              direction: existing.direction,
+              origin: existing.origin,
+              destination: existing.destination,
             },
           });
         }
 
         const id = crypto.randomUUID();
         await env.D1_DB_PLANNER.prepare(
-          `INSERT INTO tracked_routes (id, station_eva_id, line, direction, created_at)
-           VALUES (?1, ?2, ?3, ?4, ?5)`,
+          `INSERT INTO tracked_routes (id, station_eva_id, line, origin, destination, created_at)
+          VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
         )
-          .bind(id, stationEvaId, line, direction, new Date().toISOString())
+          .bind(id, stationEvaId, line, origin, destination, new Date().toISOString())
           .run();
 
         return jsonResponse({
@@ -629,7 +670,8 @@ export default {
             id,
             stationEvaId,
             line,
-            direction,
+            origin,
+            destination,
           },
         });
       }
@@ -744,15 +786,16 @@ export default {
         );
       }
 
-      const routesResult = await env.D1_DB_PLANNER.prepare(
-        `SELECT tracked_routes.id,
+        const routesResult = await env.D1_DB_PLANNER.prepare(
+          `SELECT tracked_routes.id,
             tracked_routes.station_eva_id,
             tracked_routes.line,
-            tracked_routes.direction,
+            tracked_routes.origin,
+            tracked_routes.destination,
             tracked_stations.name as station_name
          FROM tracked_routes
          INNER JOIN tracked_stations ON tracked_stations.eva_id = tracked_routes.station_eva_id
-         ORDER BY tracked_stations.name, tracked_routes.line, tracked_routes.direction`,
+         ORDER BY tracked_stations.name, tracked_routes.line, tracked_routes.destination, tracked_routes.origin`,
       ).all<TrackedRouteStationRow>();
 
       const routes = routesResult.results ?? [];
@@ -844,7 +887,8 @@ export default {
 
       const departures = routes.map((route) => {
         const normalizedLine = route.line.toLowerCase();
-        const normalizedDirection = route.direction.toLowerCase();
+        const normalizedOrigin = route.origin.toLowerCase();
+        const normalizedDestination = route.destination.toLowerCase();
         const stationInfo = stationData.get(route.station_eva_id);
         const stops = stationInfo?.stops ?? [];
         const changesById = stationInfo?.changes ?? new Map<string, ChangeStop>();
@@ -852,7 +896,8 @@ export default {
         const matchingStops = stops.filter(
           (stop) =>
             stop.line.toLowerCase() === normalizedLine &&
-            stop.direction.toLowerCase() === normalizedDirection,
+            stop.origin.toLowerCase() === normalizedOrigin &&
+            stop.destination.toLowerCase() === normalizedDestination,
         );
 
         const enrichedStops = matchingStops
@@ -880,8 +925,8 @@ export default {
             stationEvaId: route.station_eva_id,
             stationName: route.station_name,
             line: route.line,
-            direction: route.direction,
-            destination: route.direction,
+            origin: route.origin,
+            destination: route.destination,
             time: "—",
             platform: "—",
             status: "No departures",
@@ -921,8 +966,8 @@ export default {
           stationEvaId: route.station_eva_id,
           stationName: route.station_name,
           line: route.line,
-          direction: route.direction,
-          destination: route.direction,
+          origin: route.origin,
+          destination: route.destination,
           time: formatDisplayTime(timeValue),
           platform: change?.platform || stop.platform || "—",
           status,

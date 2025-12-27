@@ -57,7 +57,10 @@ export class AdminConfigComponent {
   protected readonly hasDiscoveredRoutes = computed(() => this.discoveredRoutes().length > 0);
   protected readonly hasTrackedRoutes = computed(() => this.trackedRoutes().length > 0);
   protected readonly trackedRouteKeys = computed(
-    () => new Set(this.trackedRoutes().map((route) => this.routeKey(route.line, route.direction)))
+    () =>
+      new Set(
+        this.trackedRoutes().map((route) => this.routeKey(route.line, route.origin, route.destination))
+      )
   );
   protected readonly selectedStation = computed(() =>
     this.trackedStations().find((station) => station.evaId === this.selectedStationEvaId()) ?? null
@@ -209,11 +212,19 @@ export class AdminConfigComponent {
       return;
     }
 
-    this.savingRouteKeys.update((keys) => [...keys, this.routeKey(route.line, route.direction)]);
+    this.savingRouteKeys.update((keys) => [
+      ...keys,
+      this.routeKey(route.line, route.origin, route.destination)
+    ]);
 
     try {
       this.routeTrackingService
-        .trackRoute({ stationEvaId: evaId, line: route.line, direction: route.direction })
+        .trackRoute({
+          stationEvaId: evaId,
+          line: route.line,
+          origin: route.origin,
+          destination: route.destination
+        })
         .subscribe({
           next: (response: SaveTrackedRouteResponse) => {
             if (response?.route) {
@@ -223,25 +234,27 @@ export class AdminConfigComponent {
           error: (error: HttpErrorResponse) => {
             this.trackedRoutesErrorMessage.set(error.message || 'Unable to save tracked route.');
             this.savingRouteKeys.update((keys) =>
-              keys.filter((key) => key !== this.routeKey(route.line, route.direction))
+              keys.filter((key) => key !== this.routeKey(route.line, route.origin, route.destination))
             );
           },
           complete: () => {
             this.savingRouteKeys.update((keys) =>
-              keys.filter((key) => key !== this.routeKey(route.line, route.direction))
+              keys.filter((key) => key !== this.routeKey(route.line, route.origin, route.destination))
             );
           }
         });
     } catch (error: unknown) {
       this.trackedRoutesErrorMessage.set(error instanceof Error ? error.message : 'Unable to reach the worker.');
       this.savingRouteKeys.update((keys) =>
-        keys.filter((key) => key !== this.routeKey(route.line, route.direction))
+        keys.filter((key) => key !== this.routeKey(route.line, route.origin, route.destination))
       );
     }
   }
 
   protected isTrackingRoute(route: RouteCandidate): boolean {
-    return this.savingRouteKeys().includes(this.routeKey(route.line, route.direction));
+    return this.savingRouteKeys().includes(
+      this.routeKey(route.line, route.origin, route.destination)
+    );
   }
 
   protected loadTrackedRoutes(evaId: string): void {
@@ -438,13 +451,17 @@ export class AdminConfigComponent {
     }
     return [...routes, route].sort((a, b) => {
       if (a.line === b.line) {
-        return a.direction.localeCompare(b.direction);
+        const destinationComparison = a.destination.localeCompare(b.destination);
+        if (destinationComparison !== 0) {
+          return destinationComparison;
+        }
+        return a.origin.localeCompare(b.origin);
       }
       return a.line.localeCompare(b.line);
     });
   }
 
-  private routeKey(line: string, direction: string): string {
-    return `${line}::${direction}`.toLowerCase();
+  private routeKey(line: string, origin: string, destination: string): string {
+    return `${line}::${origin}::${destination}`.toLowerCase();
   }
 }

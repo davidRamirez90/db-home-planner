@@ -1,6 +1,7 @@
 export type RouteCandidate = {
   line: string;
-  direction: string;
+  origin: string;
+  destination: string;
 };
 
 export type RouteDiscoveryResponse = {
@@ -15,7 +16,8 @@ export type TrackedRoute = {
   id: string;
   stationEvaId: string;
   line: string;
-  direction: string;
+  origin: string;
+  destination: string;
 };
 
 export type TrackedRoutesResponse = {

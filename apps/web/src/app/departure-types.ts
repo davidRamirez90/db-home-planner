@@ -3,7 +3,7 @@ export type DepartureEntry = {
   stationEvaId: string;
   stationName: string;
   line: string;
-  direction: string;
+  origin: string;
   destination: string;
   time: string;
   platform: string;

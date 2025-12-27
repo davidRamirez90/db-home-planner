@@ -164,16 +164,16 @@
       @if (routeRequestStatus() === 'success') {
         @if (hasDiscoveredRoutes()) {
           <ul class="results">
-            @for (route of discoveredRoutes(); track route.line + route.direction) {
+            @for (route of discoveredRoutes(); track route.line + route.origin + route.destination) {
               <li class="result">
                 <div class="result-header">
                   <div>
                     <div class="result-title">{{ route.line }}</div>
                     <div class="result-meta">
-                      <span>{{ route.direction }}</span>
+                      <span>{{ route.origin }} -> {{ route.destination }}</span>
                     </div>
                   </div>
-                  @if (trackedRouteKeys().has((route.line + '::' + route.direction).toLowerCase())) {
+                  @if (trackedRouteKeys().has((route.line + '::' + route.origin + '::' + route.destination).toLowerCase())) {
                     <span class="saved-label" aria-label="Route tracked">Tracked</span>
                   } @else {
                     <button
@@ -214,7 +214,7 @@
                   <div>
                     <div class="result-title">{{ route.line }}</div>
                     <div class="result-meta">
-                      <span>{{ route.direction }}</span>
+                      <span>{{ route.origin }} -> {{ route.destination }}</span>
                     </div>
                   </div>
                 </div>

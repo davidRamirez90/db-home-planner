@@ -13,7 +13,8 @@ import {
 type TrackRoutePayload = {
   stationEvaId: string;
   line: string;
-  direction: string;
+  origin: string;
+  destination: string;
 };
 
 type SaveTravelTimePayload = {
