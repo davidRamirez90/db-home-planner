@@ -25,8 +25,7 @@
       <span class="board-cell" role="columnheader">STATION</span>
       <span class="board-cell" role="columnheader">TIME</span>
       <span class="board-cell" role="columnheader">LINE</span>
-      <span class="board-cell" role="columnheader">DESTINATION</span>
-      <span class="board-cell" role="columnheader">PLATFORM</span>
+      <span class="board-cell" role="columnheader">COUNTDOWN</span>
       <span class="board-cell" role="columnheader">STATUS</span>
       <span class="board-cell" role="columnheader">ACTION</span>
     </div>
@@ -59,19 +58,11 @@
         </span>
         <span class="board-cell" role="cell">
           <span class="board-text" aria-hidden="true">
-            @for (char of toChars(row.destination); track $index; let i = $index) {
+            @for (char of toChars(row.countdown); track $index; let i = $index) {
               <app-segment-display [value]="char" [delayMs]="i * 35" />
             }
           </span>
-          <span class="sr-only">{{ row.destination }}</span>
-        </span>
-        <span class="board-cell" role="cell">
-          <span class="board-text" aria-hidden="true">
-            @for (char of toChars(row.platform); track $index; let i = $index) {
-              <app-segment-display [value]="char" [delayMs]="i * 35" />
-            }
-          </span>
-          <span class="sr-only">{{ row.platform }}</span>
+          <span class="sr-only">{{ row.countdown }}</span>
         </span>
         <span class="board-cell" role="cell">
           <span class="board-text" aria-hidden="true">

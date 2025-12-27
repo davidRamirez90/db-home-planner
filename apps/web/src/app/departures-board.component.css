@@ -79,7 +79,7 @@
 
 .board-row {
   display: grid;
-  grid-template-columns: 2.2fr 1fr 1.1fr 2.4fr 0.9fr 1.3fr 1.6fr;
+  grid-template-columns: 2.2fr 1fr 1fr 1.2fr 1.3fr 1.6fr;
   gap: 0.4rem;
 }
 
@@ -149,7 +149,7 @@
 
 @media (max-width: 1100px) {
   .board-row {
-    grid-template-columns: 1.8fr 1fr 1fr 2fr 0.9fr 1.2fr;
+    grid-template-columns: 1.8fr 1fr 1fr 1.2fr 1.2fr 1.4fr;
   }
 
   .board-row .board-cell:last-child {
