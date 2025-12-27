@@ -8,7 +8,7 @@ import {
   untracked
 } from '@angular/core';
 
-const FLAP_SEQUENCE = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:.-/';
+const FLAP_SEQUENCE = ' ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜ0123456789:.-/';
 const FLAP_DURATION_MS = 30;
 
 @Component({
