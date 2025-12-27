@@ -1,5 +1,6 @@
 type AppConfig = {
   workerApiBaseUrl?: string;
+  useSegmentDisplay?: boolean;
 };
 
 const fallbackWorkerApiBaseUrl = (() => {
@@ -17,20 +18,22 @@ const readAppConfig = (): AppConfig | null => {
     return null;
   }
 
-  if (!('workerApiBaseUrl' in configValue)) {
+  const candidate = configValue as { workerApiBaseUrl?: unknown; useSegmentDisplay?: unknown };
+  const workerApiBaseUrl =
+    typeof candidate.workerApiBaseUrl === 'string' ? candidate.workerApiBaseUrl : undefined;
+  const useSegmentDisplay =
+    typeof candidate.useSegmentDisplay === 'boolean' ? candidate.useSegmentDisplay : undefined;
+
+  if (!workerApiBaseUrl && typeof useSegmentDisplay === 'undefined') {
     return null;
   }
 
-  const workerApiBaseUrl = (configValue as { workerApiBaseUrl?: unknown }).workerApiBaseUrl;
-
-  if (typeof workerApiBaseUrl !== 'string') {
-    return null;
-  }
-
-  return { workerApiBaseUrl };
+  return { workerApiBaseUrl, useSegmentDisplay };
 };
 
-const resolvedWorkerApiBaseUrl = readAppConfig()?.workerApiBaseUrl?.trim();
+const appConfig = readAppConfig();
+const resolvedWorkerApiBaseUrl = appConfig?.workerApiBaseUrl?.trim();
+const resolvedUseSegmentDisplay = appConfig?.useSegmentDisplay;
 
 const isValidBaseUrl = (value: string | undefined): value is string => {
   if (!value) {
@@ -48,3 +51,5 @@ const isValidBaseUrl = (value: string | undefined): value is string => {
 export const workerApiBaseUrl = isValidBaseUrl(resolvedWorkerApiBaseUrl)
   ? resolvedWorkerApiBaseUrl
   : fallbackWorkerApiBaseUrl;
+
+export const useSegmentDisplay = resolvedUseSegmentDisplay ?? false;

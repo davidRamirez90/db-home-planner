@@ -63,6 +63,7 @@
 - ✅ Render departures board text with split-flap display components.
 - ✅ Correct split-flap panel orientation.
 - ✅ Support umlauts (ÄÖÜ) in split-flap display.
+- ✅ Add feature flag to toggle split-flap vs. monospaced board display.
 - Show status and recommended action for each tracked station + route + direction.
 - Add settings screens for configuration.
 

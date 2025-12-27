@@ -6,6 +6,7 @@ import {
   inject,
   signal
 } from '@angular/core';
+import { useSegmentDisplay } from './api-config';
 import { DeparturesService } from './departures.service';
 import { RequestState } from './station-types';
 import { SegmentDisplayComponent } from './segment-display.component';
@@ -29,6 +30,7 @@ export class DeparturesBoardComponent {
   protected readonly errorMessage = this.departuresService.errorMessage;
   protected readonly departures = this.departuresService.departures;
   protected readonly boardTitle = signal('ABFAHRTEN');
+  protected readonly showSegmentDisplay = useSegmentDisplay;
   private readonly now = signal(Date.now());
 
   protected readonly displayStatus = computed(() => this.formatStatus(this.requestStatus()));

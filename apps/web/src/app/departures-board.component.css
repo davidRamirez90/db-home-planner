@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+
 .board {
   background: #0e0d0b;
   border-radius: 1.5rem;
@@ -70,9 +72,20 @@
 .board-clock {
   display: flex;
   align-items: center;
-  gap: 0.06rem;
   color: #ffffff;
   font-size: 1.1rem;
+}
+
+.board-clock-text {
+  display: block;
+  font-family: "Space Mono", "IBM Plex Mono", "Menlo", "Consolas", "Courier New", monospace;
+  letter-spacing: 0.12em;
+}
+
+.board-clock-segments {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.06rem;
 }
 
 .board-error {
@@ -115,8 +128,9 @@
   color: #fdfbf6;
   padding: 0.45rem 0.5rem;
   border-radius: 0.2rem;
-  font-family: "Fira Mono", "JetBrains Mono", "Courier New", monospace;
+  font-family: "Space Mono", "IBM Plex Mono", "Menlo", "Consolas", "Courier New", monospace;
   font-size: 0.95rem;
+  font-weight: 600;
   text-transform: uppercase;
   position: relative;
   overflow: hidden;
@@ -125,10 +139,16 @@
 }
 
 .board-text {
+  display: block;
+  letter-spacing: 0.08em;
+}
+
+.board-text--segments {
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
   gap: 0.04rem;
+  letter-spacing: 0;
 }
 
 .sr-only {
