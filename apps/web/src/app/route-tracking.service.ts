@@ -61,7 +61,7 @@ export class RouteTrackingService {
       }
       return endpoint.toString();
     } catch {
-      throw new Error(`Invalid worker API base URL: ${workerApiBaseUrl}`);
+      throw new Error(`Ungültige Worker-API-Basis-URL: ${workerApiBaseUrl}`);
     }
   }
 }

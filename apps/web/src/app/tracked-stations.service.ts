@@ -27,7 +27,7 @@ export class TrackedStationsService {
         this.requestStatus.set('success');
       },
       error: (error: HttpErrorResponse) => {
-        this.errorMessage.set(error.message || 'Unable to load tracked stations.');
+        this.errorMessage.set(error.message || 'Verfolgte Stationen konnten nicht geladen werden.');
         this.requestStatus.set('error');
       }
     });
@@ -47,7 +47,7 @@ export class TrackedStationsService {
       const endpoint = new URL('/api/tracked-stations', workerApiBaseUrl);
       return endpoint.toString();
     } catch (error: unknown) {
-      const message = `Invalid worker API base URL: ${workerApiBaseUrl}`;
+      const message = `Ungültige Worker-API-Basis-URL: ${workerApiBaseUrl}`;
       this.errorMessage.set(message);
       return null;
     }
