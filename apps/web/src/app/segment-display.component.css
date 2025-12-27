@@ -12,7 +12,7 @@
   color: #f7e7b1;
   text-transform: uppercase;
   perspective: 700px;
-  --flap-duration: 360ms;
+  --flap-duration: 30ms;
 }
 
 .split-flap__panel {
