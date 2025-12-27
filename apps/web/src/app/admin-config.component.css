@@ -208,6 +208,25 @@
   opacity: 0.7;
 }
 
+.remove-button {
+  border: none;
+  background: #8f2f27;
+  color: #fff9f2;
+  padding: 0.45rem 0.8rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.remove-button:hover:not(:disabled) {
+  background: #7a251f;
+}
+
+.remove-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 .saved-label {
   background: #1f1c16;
   color: #f7e7b1;

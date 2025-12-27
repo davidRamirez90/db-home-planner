@@ -33,6 +33,7 @@ export class AdminConfigComponent {
   protected readonly trackedRoutesRequestStatus = signal<RequestState>('idle');
   protected readonly trackedRoutesErrorMessage = signal('');
   protected readonly savingRouteKeys = signal<string[]>([]);
+  protected readonly removingRouteIds = signal<string[]>([]);
   protected readonly travelTimesByRouteId = signal<Record<string, TravelTime[]>>({});
   protected readonly travelTimeRequestStatusByRoute = signal<Record<string, RequestState>>({});
   protected readonly travelTimeErrorMessageByRoute = signal<Record<string, string>>({});
@@ -275,6 +276,49 @@ export class AdminConfigComponent {
     } catch (error: unknown) {
       this.trackedRoutesErrorMessage.set(error instanceof Error ? error.message : 'Worker ist nicht erreichbar.');
       this.trackedRoutesRequestStatus.set('error');
+    }
+  }
+
+  protected untrackRoute(route: TrackedRoute): void {
+    if (this.removingRouteIds().includes(route.id)) {
+      return;
+    }
+
+    this.removingRouteIds.update((ids) => [...ids, route.id]);
+    this.trackedRoutesErrorMessage.set('');
+
+    try {
+      this.routeTrackingService.untrackRoute(route.id).subscribe({
+        next: () => {
+          this.trackedRoutes.update((routes) => routes.filter((entry) => entry.id !== route.id));
+          this.travelTimesByRouteId.update((times) => {
+            const { [route.id]: _removed, ...remaining } = times;
+            return remaining;
+          });
+          this.travelTimeRequestStatusByRoute.update((statuses) => {
+            const { [route.id]: _removed, ...remaining } = statuses;
+            return remaining;
+          });
+          this.travelTimeErrorMessageByRoute.update((errors) => {
+            const { [route.id]: _removed, ...remaining } = errors;
+            return remaining;
+          });
+          this.travelTimeDrafts.update((drafts) => {
+            const { [route.id]: _removed, ...remaining } = drafts;
+            return remaining;
+          });
+        },
+        error: (error: HttpErrorResponse) => {
+          this.trackedRoutesErrorMessage.set(error.message || 'Route konnte nicht entfernt werden.');
+          this.removingRouteIds.update((ids) => ids.filter((id) => id !== route.id));
+        },
+        complete: () => {
+          this.removingRouteIds.update((ids) => ids.filter((id) => id !== route.id));
+        }
+      });
+    } catch (error: unknown) {
+      this.trackedRoutesErrorMessage.set(error instanceof Error ? error.message : 'Worker ist nicht erreichbar.');
+      this.removingRouteIds.update((ids) => ids.filter((id) => id !== route.id));
     }
   }
 

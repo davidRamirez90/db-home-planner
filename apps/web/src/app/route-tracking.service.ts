@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { workerApiBaseUrl } from './api-config';
 import {
   RouteDiscoveryResponse,
+  RemoveTrackedRouteResponse,
   SaveTrackedRouteResponse,
   SaveTravelTimeResponse,
   TrackedRoutesResponse,
@@ -40,6 +41,11 @@ export class RouteTrackingService {
   trackRoute(payload: TrackRoutePayload): Observable<SaveTrackedRouteResponse> {
     const endpoint = this.buildEndpoint('/api/tracked-routes');
     return this.http.post<SaveTrackedRouteResponse>(endpoint, payload);
+  }
+
+  untrackRoute(routeId: string): Observable<RemoveTrackedRouteResponse> {
+    const endpoint = this.buildEndpoint('/api/tracked-routes');
+    return this.http.request<RemoveTrackedRouteResponse>('delete', endpoint, { body: { routeId } });
   }
 
   loadTravelTimes(routeId: string): Observable<TravelTimesResponse> {

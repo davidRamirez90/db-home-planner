@@ -217,6 +217,14 @@
                       <span>{{ route.origin }} -> {{ route.destination }}</span>
                     </div>
                   </div>
+                  <button
+                    type="button"
+                    class="remove-button"
+                    [disabled]="removingRouteIds().includes(route.id)"
+                    (click)="untrackRoute(route)"
+                  >
+                    {{ removingRouteIds().includes(route.id) ? 'Entfernen…' : 'Nicht mehr verfolgen' }}
+                  </button>
                 </div>
                 <div class="travel-times">
                   <div class="travel-times-header">Wegzeiten</div>
