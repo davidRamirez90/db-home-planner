@@ -684,6 +684,42 @@ export default {
         });
       }
 
+      if (request.method === "DELETE") {
+        let payload: { routeId?: string } | null = null;
+
+        try {
+          payload = (await request.json()) as { routeId?: string };
+        } catch (error) {
+          console.error("Tracked route delete payload parse failed", {
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+
+        const routeId = payload?.routeId?.trim();
+        if (!routeId) {
+          return jsonResponse({ error: "Fehlende routeId-Angabe." }, { status: 400 });
+        }
+
+        const existing = await env.D1_DB_PLANNER.prepare(
+          "SELECT id FROM tracked_routes WHERE id = ?1",
+        )
+          .bind(routeId)
+          .first<{ id: string }>();
+
+        if (!existing) {
+          return jsonResponse({ error: "Route wurde nicht gefunden." }, { status: 404 });
+        }
+
+        await env.D1_DB_PLANNER.prepare("DELETE FROM route_travel_times WHERE route_id = ?1")
+          .bind(routeId)
+          .run();
+        await env.D1_DB_PLANNER.prepare("DELETE FROM tracked_routes WHERE id = ?1")
+          .bind(routeId)
+          .run();
+
+        return jsonResponse({ routeId });
+      }
+
       return jsonResponse({ error: "Methode nicht erlaubt" }, { status: 405 });
     }
 

@@ -29,6 +29,10 @@ export type SaveTrackedRouteResponse = {
   route: TrackedRoute;
 };
 
+export type RemoveTrackedRouteResponse = {
+  routeId: string;
+};
+
 export type TravelTime = {
   id: string;
   routeId: string;
