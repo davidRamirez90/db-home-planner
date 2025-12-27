@@ -1,10 +1,12 @@
-<span class="segment-display" [attr.data-char]="displayChar()">
-  <span class="segment segment-a" [class.segment--active]="activeSegments().has('a')"></span>
-  <span class="segment segment-b" [class.segment--active]="activeSegments().has('b')"></span>
-  <span class="segment segment-c" [class.segment--active]="activeSegments().has('c')"></span>
-  <span class="segment segment-d" [class.segment--active]="activeSegments().has('d')"></span>
-  <span class="segment segment-e" [class.segment--active]="activeSegments().has('e')"></span>
-  <span class="segment segment-f" [class.segment--active]="activeSegments().has('f')"></span>
-  <span class="segment segment-g" [class.segment--active]="activeSegments().has('g')"></span>
-  <span class="segment segment-dp" [class.segment--active]="activeSegments().has('dp')"></span>
+<span class="split-flap" [attr.data-char]="currentChar()">
+  <span class="split-flap__panel split-flap__panel--top">{{ currentChar() }}</span>
+  <span class="split-flap__panel split-flap__panel--bottom">{{ currentChar() }}</span>
+  <span
+    class="split-flap__flip"
+    [class.split-flap__flip--a]="flipMode() === 'a'"
+    [class.split-flap__flip--b]="flipMode() === 'b'"
+  >
+    <span class="split-flap__flip-top">{{ previousChar() }}</span>
+    <span class="split-flap__flip-bottom">{{ currentChar() }}</span>
+  </span>
 </span>

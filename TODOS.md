@@ -60,7 +60,7 @@
 
 ## 7) UI integration
 - ✅ Display departures board with live departures data.
-- ✅ Render departures board text with 8-segment display components.
+- ✅ Render departures board text with split-flap display components.
 - Show status and recommended action for each tracked station + route + direction.
 - Add settings screens for configuration.
 
