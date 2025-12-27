@@ -28,7 +28,7 @@ export class DeparturesService {
         this.requestStatus.set('success');
       },
       error: (error: HttpErrorResponse) => {
-        this.errorMessage.set(error.message || 'Unable to load departures.');
+        this.errorMessage.set(error.message || 'Abfahrten konnten nicht geladen werden.');
         this.requestStatus.set('error');
       }
     });
@@ -39,7 +39,7 @@ export class DeparturesService {
       const endpoint = new URL('/api/departures', workerApiBaseUrl);
       return endpoint.toString();
     } catch (error: unknown) {
-      const message = `Invalid worker API base URL: ${workerApiBaseUrl}`;
+      const message = `Ungültige Worker-API-Basis-URL: ${workerApiBaseUrl}`;
       this.errorMessage.set(message);
       return null;
     }

@@ -1,4 +1,4 @@
-<section class="board" aria-label="Departures board">
+<section class="board" aria-label="Abfahrtstafel">
   <header class="board-header">
     <div class="board-title">
       <span class="board-icon" aria-hidden="true">✈</span>
@@ -16,7 +16,7 @@
           <app-segment-display [value]="char" [delayMs]="i * 20" />
         }
       </div>
-      <span class="sr-only">CURRENT TIME {{ displayClock() }}</span>
+      <span class="sr-only">AKTUELLE UHRZEIT {{ displayClock() }}</span>
     </div>
   </header>
 
@@ -25,17 +25,17 @@
   }
 
   @if (!errorMessage() && requestStatus() === 'success' && boardRows().length === 0) {
-    <p class="board-empty">NO TRACKED ROUTES YET. ADD ONE IN THE ADMIN CONFIG.</p>
+    <p class="board-empty">NOCH KEINE VERFOLGTEN ROUTEN. FÜGE EINE IN DER ADMIN-KONFIGURATION HINZU.</p>
   }
 
-  <div class="board-grid" role="table" aria-label="Departures overview">
+  <div class="board-grid" role="table" aria-label="Abfahrtsübersicht">
     <div class="board-row board-row--header" role="row">
       <span class="board-cell" role="columnheader">STATION</span>
-      <span class="board-cell" role="columnheader">TIME</span>
-      <span class="board-cell" role="columnheader">LINE</span>
-      <span class="board-cell" role="columnheader">COUNTDOWN</span>
+      <span class="board-cell" role="columnheader">ZEIT</span>
+      <span class="board-cell" role="columnheader">LINIE</span>
+      <span class="board-cell" role="columnheader">RESTZEIT</span>
       <span class="board-cell" role="columnheader">STATUS</span>
-      <span class="board-cell" role="columnheader">ACTION</span>
+      <span class="board-cell" role="columnheader">EMPFEHLUNG</span>
     </div>
 
     @for (row of boardRows(); track $index) {

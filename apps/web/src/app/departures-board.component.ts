@@ -7,6 +7,7 @@ import {
   signal
 } from '@angular/core';
 import { DeparturesService } from './departures.service';
+import { RequestState } from './station-types';
 import { SegmentDisplayComponent } from './segment-display.component';
 
 const COUNTDOWN_INTERVAL_MS = 5000;
@@ -27,10 +28,10 @@ export class DeparturesBoardComponent {
   protected readonly requestStatus = this.departuresService.requestStatus;
   protected readonly errorMessage = this.departuresService.errorMessage;
   protected readonly departures = this.departuresService.departures;
-  protected readonly boardTitle = signal('DEPARTURES');
+  protected readonly boardTitle = signal('ABFAHRTEN');
   private readonly now = signal(Date.now());
 
-  protected readonly displayStatus = computed(() => this.requestStatus().toUpperCase());
+  protected readonly displayStatus = computed(() => this.formatStatus(this.requestStatus()));
   protected readonly displayClock = computed(() => this.formatClock(this.now()));
 
   protected readonly displayErrorMessage = computed(() => {
@@ -86,7 +87,7 @@ export class DeparturesBoardComponent {
     target.setHours(hours, minutes, 0, 0);
     const diffMs = target.getTime() - now;
     if (diffMs <= 0) {
-      return 'DUE';
+      return 'JETZT';
     }
 
     const totalMinutes = Math.floor(diffMs / MS_PER_MINUTE);
@@ -96,7 +97,7 @@ export class DeparturesBoardComponent {
 
     const countdownHours = Math.floor(totalMinutes / MINUTES_PER_HOUR);
     const countdownMinutes = totalMinutes % MINUTES_PER_HOUR;
-    return `${countdownHours}H ${countdownMinutes.toString().padStart(2, '0')}M`;
+    return `${countdownHours}STD ${countdownMinutes.toString().padStart(2, '0')}MIN`;
   }
 
   private formatClock(now: number): string {
@@ -104,6 +105,19 @@ export class DeparturesBoardComponent {
     const hours = current.getHours().toString().padStart(2, '0');
     const minutes = current.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
+  }
+
+  private formatStatus(status: RequestState): string {
+    switch (status) {
+      case 'loading':
+        return 'LÄDT';
+      case 'success':
+        return 'OK';
+      case 'error':
+        return 'FEHLER';
+      default:
+        return 'BEREIT';
+    }
   }
 
   constructor() {

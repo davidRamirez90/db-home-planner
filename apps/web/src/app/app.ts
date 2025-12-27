@@ -9,5 +9,5 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
   imports: [RouterOutlet, RouterLink, RouterLinkActive]
 })
 export class App {
-  protected readonly title = signal('DB Home Planner');
+  protected readonly title = signal('DB Heimplaner');
 }
