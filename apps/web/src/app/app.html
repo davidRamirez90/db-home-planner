@@ -1,20 +1,20 @@
 <div class="app-shell">
   <header class="app-header">
     <div class="brand">
-      <span class="brand-eyebrow">Departures Board</span>
+      <span class="brand-eyebrow">Abfahrtstafel</span>
       <h1>{{ title() }}</h1>
     </div>
-    <nav class="header-actions" aria-label="Primary">
+    <nav class="header-actions" aria-label="Primär">
       <a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-        Board
+        Tafel
       </a>
       <details class="config-menu">
-        <summary aria-haspopup="menu" aria-label="Open configuration menu">
-          Config
+        <summary aria-haspopup="menu" aria-label="Konfigurationsmenü öffnen">
+          Konfig
         </summary>
         <div class="config-panel" role="menu">
           <a class="nav-link" routerLink="/admin" routerLinkActive="active" role="menuitem">
-            Admin config
+            Admin-Konfig
           </a>
         </div>
       </details>

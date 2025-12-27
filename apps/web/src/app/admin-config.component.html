@@ -1,27 +1,27 @@
 <section class="admin-page">
   <header class="admin-hero">
-    <p class="eyebrow">Admin configuration</p>
-    <h2>Station search & saved list</h2>
+    <p class="eyebrow">Admin-Konfiguration</p>
+    <h2>Stationssuche & gespeicherte Liste</h2>
     <p class="subtitle">
-      Search Deutsche Bahn stations and save them for the departures board.
+      Deutsche-Bahn-Stationen suchen und für die Abfahrtstafel speichern.
     </p>
   </header>
 
   <section class="card">
     <form class="station-form" [formGroup]="stationForm" (ngSubmit)="searchStations()">
       <label class="field">
-        <span class="label">Station name or code</span>
+        <span class="label">Stationsname oder Code</span>
         <input
           id="station-query"
           type="text"
           formControlName="stationQuery"
           autocomplete="off"
-          placeholder="e.g., Berlin Hbf"
+          placeholder="z. B. Berlin Hbf"
           aria-describedby="station-help"
         />
       </label>
       <p id="station-help" class="help">
-        Enter at least 2 characters (name, EVA, or DS100 code).
+        Mindestens 2 Zeichen eingeben (Name, EVA oder DS100-Code).
       </p>
       <div class="form-actions">
         <button
@@ -29,16 +29,16 @@
           class="refresh-button"
           [disabled]="stationQuery.invalid || requestStatus() === 'loading'"
         >
-          Search stations
+          Stationen suchen
         </button>
         <span class="status" [attr.data-status]="requestStatus()">
-          {{ requestStatus() }}
+          {{ displayRequestStatus(requestStatus()) }}
         </span>
       </div>
     </form>
 
     @if (requestStatus() === 'loading') {
-      <p class="loading">Searching stations…</p>
+      <p class="loading">Stationen werden gesucht…</p>
     }
     @if (errorMessage()) {
       <p class="error">{{ errorMessage() }}</p>
@@ -51,7 +51,7 @@
               <div class="result-header">
                 <div class="result-title">{{ station.name }}</div>
                 @if (trackedEvaIds().has(station.evaId)) {
-                  <span class="saved-label" aria-label="Station saved">Saved</span>
+                  <span class="saved-label" aria-label="Station gespeichert">Gespeichert</span>
                 } @else {
                   <button
                     type="button"
@@ -59,7 +59,7 @@
                     [disabled]="isSaving(station.evaId)"
                     (click)="saveStation(station)"
                   >
-                    {{ isSaving(station.evaId) ? 'Saving…' : 'Save station' }}
+                    {{ isSaving(station.evaId) ? 'Speichern…' : 'Station speichern' }}
                   </button>
                 }
               </div>
@@ -73,16 +73,16 @@
           }
         </ul>
       } @else {
-        <p class="empty">No stations found for "{{ lastQuery() }}".</p>
+        <p class="empty">Keine Stationen für „{{ lastQuery() }}“ gefunden.</p>
       }
     }
   </section>
 
   <section class="card">
     <header class="section-header">
-      <h3>Tracked stations</h3>
+      <h3>Verfolgte Stationen</h3>
       <span class="status" [attr.data-status]="trackedRequestStatus()">
-        {{ trackedRequestStatus() }}
+        {{ displayRequestStatus(trackedRequestStatus()) }}
       </span>
     </header>
     @if (trackedErrorMessage()) {
@@ -92,7 +92,7 @@
       <p class="error">{{ saveErrorMessage() }}</p>
     }
     @if (trackedRequestStatus() === 'loading') {
-      <p class="loading">Loading tracked stations…</p>
+      <p class="loading">Verfolgte Stationen werden geladen…</p>
     }
     @if (trackedRequestStatus() === 'success') {
       @if (hasTrackedStations()) {
@@ -110,23 +110,23 @@
           }
         </ul>
       } @else {
-        <p class="empty">No tracked stations yet. Save a station from the search results.</p>
+        <p class="empty">Noch keine verfolgten Stationen. Speichere eine Station aus den Suchergebnissen.</p>
       }
     }
   </section>
 
   <section class="card">
     <header class="section-header">
-      <h3>Routes & travel times</h3>
+      <h3>Routen & Wegzeiten</h3>
       <span class="status" [attr.data-status]="trackedRoutesRequestStatus()">
-        {{ trackedRoutesRequestStatus() }}
+        {{ displayRequestStatus(trackedRoutesRequestStatus()) }}
       </span>
     </header>
     @if (!hasTrackedStations()) {
-      <p class="empty">Track a station first to discover available routes.</p>
+      <p class="empty">Bitte zuerst eine Station verfolgen, um verfügbare Routen zu finden.</p>
     } @else {
       <label class="field">
-        <span class="label">Tracked station</span>
+        <span class="label">Verfolgte Station</span>
         <select
           id="tracked-station"
           class="select"
@@ -148,15 +148,15 @@
           [disabled]="!selectedStation() || routeRequestStatus() === 'loading'"
           (click)="discoverRoutes()"
         >
-          Discover routes
+          Routen suchen
         </button>
         <span class="status" [attr.data-status]="routeRequestStatus()">
-          {{ routeRequestStatus() }}
+          {{ displayRequestStatus(routeRequestStatus()) }}
         </span>
       </div>
 
       @if (routeRequestStatus() === 'loading') {
-        <p class="loading">Fetching routes for {{ selectedStation()?.name }}…</p>
+        <p class="loading">Routen für {{ selectedStation()?.name }} werden geladen…</p>
       }
       @if (routeErrorMessage()) {
         <p class="error">{{ routeErrorMessage() }}</p>
@@ -174,7 +174,7 @@
                     </div>
                   </div>
                   @if (trackedRouteKeys().has((route.line + '::' + route.origin + '::' + route.destination).toLowerCase())) {
-                    <span class="saved-label" aria-label="Route tracked">Tracked</span>
+                    <span class="saved-label" aria-label="Route verfolgt">Verfolgt</span>
                   } @else {
                     <button
                       type="button"
@@ -182,7 +182,7 @@
                       [disabled]="isTrackingRoute(route)"
                       (click)="trackRoute(route)"
                     >
-                      {{ isTrackingRoute(route) ? 'Saving…' : 'Track route' }}
+                      {{ isTrackingRoute(route) ? 'Speichern…' : 'Route verfolgen' }}
                     </button>
                   }
                 </div>
@@ -190,20 +190,20 @@
             }
           </ul>
         } @else {
-          <p class="empty">No routes found for {{ selectedStation()?.name }} yet.</p>
+          <p class="empty">Noch keine Routen für {{ selectedStation()?.name }} gefunden.</p>
         }
       }
 
       <div class="section-divider"></div>
 
       <header class="section-header">
-        <h4>Tracked routes & travel times</h4>
+        <h4>Verfolgte Routen & Wegzeiten</h4>
       </header>
       @if (trackedRoutesErrorMessage()) {
         <p class="error">{{ trackedRoutesErrorMessage() }}</p>
       }
       @if (trackedRoutesRequestStatus() === 'loading') {
-        <p class="loading">Loading tracked routes…</p>
+        <p class="loading">Verfolgte Routen werden geladen…</p>
       }
       @if (trackedRoutesRequestStatus() === 'success') {
         @if (hasTrackedRoutes()) {
@@ -219,9 +219,9 @@
                   </div>
                 </div>
                 <div class="travel-times">
-                  <div class="travel-times-header">Travel times</div>
+                  <div class="travel-times-header">Wegzeiten</div>
                   @if (travelTimeStatus(route.id) === 'loading') {
-                    <p class="loading">Loading travel times…</p>
+                    <p class="loading">Wegzeiten werden geladen…</p>
                   }
                   @if (travelTimeError(route.id)) {
                     <p class="error">{{ travelTimeError(route.id) }}</p>
@@ -232,27 +232,27 @@
                         @for (time of travelTimes(route.id); track time.id) {
                           <li>
                             <strong>{{ time.label }}</strong>
-                            <span>{{ time.minutes }} min</span>
+                            <span>{{ time.minutes }} Min</span>
                           </li>
                         }
                       </ul>
                     } @else {
-                      <p class="empty">No travel times configured yet.</p>
+                      <p class="empty">Noch keine Wegzeiten konfiguriert.</p>
                     }
                   }
                   <div class="travel-time-form">
                     <label class="field">
-                      <span class="label">Label</span>
+                      <span class="label">Bezeichnung</span>
                       <input
                         #labelInput
                         type="text"
                         [value]="travelTimeDraft(route.id).label"
-                        placeholder="e.g., Fast walk"
+                        placeholder="z. B. Schneller Gang"
                         (input)="updateTravelTimeLabel(route.id, labelInput.value)"
                       />
                     </label>
                     <label class="field">
-                      <span class="label">Minutes</span>
+                      <span class="label">Minuten</span>
                       <input
                         #minutesInput
                         type="number"
@@ -268,7 +268,7 @@
                       [disabled]="savingTravelTimeRouteIds().includes(route.id)"
                       (click)="saveTravelTime(route)"
                     >
-                      {{ savingTravelTimeRouteIds().includes(route.id) ? 'Saving…' : 'Save travel time' }}
+                      {{ savingTravelTimeRouteIds().includes(route.id) ? 'Speichern…' : 'Wegzeit speichern' }}
                     </button>
                   </div>
                 </div>
@@ -276,7 +276,7 @@
             }
           </ul>
         } @else {
-          <p class="empty">No tracked routes yet for {{ selectedStation()?.name }}.</p>
+          <p class="empty">Noch keine verfolgten Routen für {{ selectedStation()?.name }}.</p>
         }
       }
     }

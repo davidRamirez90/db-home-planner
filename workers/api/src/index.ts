@@ -17,7 +17,7 @@ type Env = {
 };
 
 const notFound = () =>
-  new Response(JSON.stringify({ error: "Not Found" }), {
+  new Response(JSON.stringify({ error: "Nicht gefunden" }), {
     status: 404,
     headers: jsonHeaders,
   });
@@ -125,6 +125,14 @@ const parsePathEndpoint = (rawPath?: string, position: "first" | "last"): string
   return position === "first" ? segments[0] : segments[segments.length - 1];
 };
 
+const normalizeStationName = (value: string): string => {
+  if (!value) {
+    return value;
+  }
+  const stripped = value.replaceAll("Dortmund-", "");
+  return stripped.replace(/\s{2,}/g, " ").trim();
+};
+
 const parseStationsFromXml = (xmlPayload: string): StationAttributes[] => {
   const stations: StationAttributes[] = [];
   const stationMatches = xmlPayload.matchAll(/<station\s+([^>]+?)\/?>/gi);
@@ -139,7 +147,7 @@ const parseStationsFromXml = (xmlPayload: string): StationAttributes[] => {
 
     stations.push({
       evaId: attributes.eva ?? "",
-      name: attributes.name ?? "",
+      name: normalizeStationName(attributes.name ?? ""),
       ds100: attributes.ds100 || undefined,
     });
   }
@@ -403,12 +411,12 @@ export default {
     }
 
     if (url.pathname === "/" || url.pathname === "/api/hello") {
-      return jsonResponse({ message: "Hello from db-home-planner worker" });
+      return jsonResponse({ message: "Hallo vom db-home-planner Worker" });
     }
 
     if (url.pathname === "/api/tracked-stations") {
       if (!env.D1_DB_PLANNER) {
-        return jsonResponse({ error: "Missing D1 database binding." }, { status: 500 });
+        return jsonResponse({ error: "Fehlende D1-Datenbankbindung." }, { status: 500 });
       }
 
       if (request.method === "GET") {
@@ -418,7 +426,7 @@ export default {
 
         const stations = (result.results ?? []).map((row) => ({
           evaId: row.eva_id,
-          name: row.name,
+          name: normalizeStationName(row.name),
           ds100: row.ds100 ?? undefined,
         }));
 
@@ -440,13 +448,13 @@ export default {
         }
 
         const evaId = payload?.evaId?.trim();
-        const name = payload?.name?.trim();
+        const name = normalizeStationName(payload?.name?.trim() ?? "");
         const ds100 = payload?.ds100?.trim();
 
         if (!evaId || !name) {
           return jsonResponse(
             {
-              error: "Missing required station details.",
+              error: "Erforderliche Stationsangaben fehlen.",
             },
             { status: 400 },
           );
@@ -469,12 +477,12 @@ export default {
         });
       }
 
-      return jsonResponse({ error: "Method Not Allowed" }, { status: 405 });
+      return jsonResponse({ error: "Methode nicht erlaubt" }, { status: 405 });
     }
 
     if (url.pathname === "/api/routes") {
       if (request.method !== "GET") {
-        return jsonResponse({ error: "Method Not Allowed" }, { status: 405 });
+        return jsonResponse({ error: "Methode nicht erlaubt" }, { status: 405 });
       }
 
       const evaId = url.searchParams.get("evaId")?.trim();
@@ -482,13 +490,13 @@ export default {
       const hourParam = url.searchParams.get("hour")?.trim();
 
       if (!evaId) {
-        return jsonResponse({ error: "Missing evaId parameter." }, { status: 400 });
+        return jsonResponse({ error: "Fehlender evaId-Parameter." }, { status: 400 });
       }
 
       if (!env.DB_API_BASE_URL || !env.DB_API_KEY || !env.DB_API_CLIENT_ID) {
         return jsonResponse(
           {
-            error: "Missing DB API configuration.",
+            error: "Fehlende DB-API-Konfiguration.",
           },
           { status: 500 },
         );
@@ -500,7 +508,7 @@ export default {
       if (!isValidDateParam(date) || !isValidHourParam(hour)) {
         return jsonResponse(
           {
-            error: "Invalid date or hour parameter.",
+            error: "Ungültiger Datums- oder Stundenparameter.",
           },
           { status: 400 },
         );
@@ -530,7 +538,7 @@ export default {
         console.error("Plan API fetch failed", {
           message: error instanceof Error ? error.message : String(error),
         });
-        return jsonResponse({ error: "Unable to reach plan API." }, { status: 502 });
+        return jsonResponse({ error: "Plan-API ist nicht erreichbar." }, { status: 502 });
       }
 
       if (!planResponse.ok) {
@@ -540,7 +548,7 @@ export default {
         });
         return jsonResponse(
           {
-            error: "Failed to fetch planned departures.",
+            error: "Geplante Abfahrten konnten nicht geladen werden.",
             status: planResponse.status,
           },
           { status: planResponse.status },
@@ -555,7 +563,7 @@ export default {
         console.error("Plan API read failed", {
           message: error instanceof Error ? error.message : String(error),
         });
-        return jsonResponse({ error: "Unable to read plan response." }, { status: 502 });
+        return jsonResponse({ error: "Plan-Antwort konnte nicht gelesen werden." }, { status: 502 });
       }
 
       console.log("Plan API response body", {
@@ -577,7 +585,7 @@ export default {
 
     if (url.pathname === "/api/tracked-routes") {
       if (!env.D1_DB_PLANNER) {
-        return jsonResponse({ error: "Missing D1 database binding." }, { status: 500 });
+        return jsonResponse({ error: "Fehlende D1-Datenbankbindung." }, { status: 500 });
       }
 
       if (request.method === "GET") {
@@ -633,7 +641,7 @@ export default {
         if (!stationEvaId || !line || !origin || !destination) {
           return jsonResponse(
             {
-              error: "Missing required route details.",
+              error: "Erforderliche Routendaten fehlen.",
             },
             { status: 400 },
           );
@@ -676,18 +684,18 @@ export default {
         });
       }
 
-      return jsonResponse({ error: "Method Not Allowed" }, { status: 405 });
+      return jsonResponse({ error: "Methode nicht erlaubt" }, { status: 405 });
     }
 
     if (url.pathname === "/api/travel-times") {
       if (!env.D1_DB_PLANNER) {
-        return jsonResponse({ error: "Missing D1 database binding." }, { status: 500 });
+        return jsonResponse({ error: "Fehlende D1-Datenbankbindung." }, { status: 500 });
       }
 
       if (request.method === "GET") {
         const routeId = url.searchParams.get("routeId")?.trim();
         if (!routeId) {
-          return jsonResponse({ error: "Missing routeId parameter." }, { status: 400 });
+          return jsonResponse({ error: "Fehlender routeId-Parameter." }, { status: 400 });
         }
 
         const result = await env.D1_DB_PLANNER.prepare(
@@ -728,7 +736,7 @@ export default {
         if (!routeId || !label || typeof minutes !== "number" || Number.isNaN(minutes)) {
           return jsonResponse(
             {
-              error: "Missing required travel time details.",
+              error: "Erforderliche Wegzeitangaben fehlen.",
             },
             { status: 400 },
           );
@@ -752,7 +760,7 @@ export default {
           .first<TravelTimeRow>();
 
         if (!saved) {
-          return jsonResponse({ error: "Unable to store travel time." }, { status: 500 });
+          return jsonResponse({ error: "Wegzeit konnte nicht gespeichert werden." }, { status: 500 });
         }
 
         return jsonResponse({
@@ -765,22 +773,22 @@ export default {
         });
       }
 
-      return jsonResponse({ error: "Method Not Allowed" }, { status: 405 });
+      return jsonResponse({ error: "Methode nicht erlaubt" }, { status: 405 });
     }
 
     if (url.pathname === "/api/departures") {
       if (!env.D1_DB_PLANNER) {
-        return jsonResponse({ error: "Missing D1 database binding." }, { status: 500 });
+        return jsonResponse({ error: "Fehlende D1-Datenbankbindung." }, { status: 500 });
       }
 
       if (request.method !== "GET") {
-        return jsonResponse({ error: "Method Not Allowed" }, { status: 405 });
+        return jsonResponse({ error: "Methode nicht erlaubt" }, { status: 405 });
       }
 
       if (!env.DB_API_BASE_URL || !env.DB_API_KEY || !env.DB_API_CLIENT_ID) {
         return jsonResponse(
           {
-            error: "Missing DB API configuration.",
+            error: "Fehlende DB-API-Konfiguration.",
           },
           { status: 500 },
         );
@@ -851,22 +859,22 @@ export default {
           planXml = await fetchTimetableXml({
             url: planUrl,
             env,
-            errorMessage: "Failed to fetch planned departures.",
+            errorMessage: "Geplante Abfahrten konnten nicht geladen werden.",
           });
           nextPlanXml = await fetchTimetableXml({
             url: nextPlanUrl,
             env,
-            errorMessage: "Failed to fetch planned departures.",
+            errorMessage: "Geplante Abfahrten konnten nicht geladen werden.",
           });
           changesXml = await fetchTimetableXml({
             url: changesUrl,
             env,
-            errorMessage: "Failed to fetch changed departures.",
+            errorMessage: "Aktualisierte Abfahrten konnten nicht geladen werden.",
           });
         } catch (error) {
           return jsonResponse(
             {
-              error: error instanceof Error ? error.message : "Failed to fetch departures.",
+              error: error instanceof Error ? error.message : "Abfahrten konnten nicht geladen werden.",
             },
             { status: 502 },
           );
@@ -923,48 +931,48 @@ export default {
           return {
             routeId: route.id,
             stationEvaId: route.station_eva_id,
-            stationName: route.station_name,
+            stationName: normalizeStationName(route.station_name),
             line: route.line,
             origin: route.origin,
             destination: route.destination,
             time: "—",
             platform: "—",
-            status: "No departures",
-            action: "Check later",
+            status: "Keine Abfahrten",
+            action: "Später prüfen",
           };
         }
 
         const { stop, change, timeValue, timeDate } = nextDeparture;
         const plannedTime = stop.plannedTime;
         const status = change?.cancelled
-          ? "Cancelled"
+          ? "Ausgefallen"
           : change?.changedTime && change.changedTime !== plannedTime
-            ? "Delayed"
-            : "On time";
+            ? "Verspätet"
+            : "Pünktlich";
 
         const travelMinutes = travelTimesByRoute.get(route.id)?.[0];
         const minutesUntil =
           timeDate ? Math.floor((timeDate.getTime() - now.getTime()) / 60000) : null;
-        let action = "Check later";
+        let action = "Später prüfen";
 
-        if (status === "Cancelled") {
-          action = "Wait for next one";
+        if (status === "Ausgefallen") {
+          action = "Auf die nächste warten";
         } else if (!travelMinutes) {
-          action = "Add travel time";
+          action = "Wegzeit hinzufügen";
         } else if (minutesUntil === null || minutesUntil < 0) {
-          action = "Wait for next one";
+          action = "Auf die nächste warten";
         } else if (minutesUntil < travelMinutes) {
-          action = "Wait for next one";
+          action = "Auf die nächste warten";
         } else if (minutesUntil <= travelMinutes + 10) {
-          action = "Hurry";
+          action = "Beeilen";
         } else {
-          action = "Walk slowly";
+          action = "Langsam gehen";
         }
 
         return {
           routeId: route.id,
           stationEvaId: route.station_eva_id,
-          stationName: route.station_name,
+          stationName: normalizeStationName(route.station_name),
           line: route.line,
           origin: route.origin,
           destination: route.destination,
@@ -984,7 +992,7 @@ export default {
 
     if (url.pathname === "/api/stations") {
       if (request.method !== "GET") {
-        return jsonResponse({ error: "Method Not Allowed" }, { status: 405 });
+        return jsonResponse({ error: "Methode nicht erlaubt" }, { status: 405 });
       }
 
       const query = url.searchParams.get("query")?.trim();
@@ -992,7 +1000,7 @@ export default {
       console.log("Station lookup request", { query });
 
       if (!query) {
-        return jsonResponse({ error: "Missing query parameter." }, { status: 400 });
+        return jsonResponse({ error: "Fehlender query-Parameter." }, { status: 400 });
       }
 
       console.log("DB API env check", {
@@ -1004,7 +1012,7 @@ export default {
       if (!env.DB_API_BASE_URL || !env.DB_API_KEY || !env.DB_API_CLIENT_ID) {
         return jsonResponse(
           {
-            error: "Missing DB API configuration.",
+            error: "Fehlende DB-API-Konfiguration.",
           },
           { status: 500 },
         );
@@ -1031,7 +1039,7 @@ export default {
         console.error("Station API fetch failed", {
           message: error instanceof Error ? error.message : String(error),
         });
-        return jsonResponse({ error: "Unable to reach station API." }, { status: 502 });
+        return jsonResponse({ error: "Stations-API ist nicht erreichbar." }, { status: 502 });
       }
 
       console.log("Station API response", {
@@ -1043,7 +1051,7 @@ export default {
       if (!stationResponse.ok) {
         return jsonResponse(
           {
-            error: "Failed to fetch station data.",
+            error: "Stationsdaten konnten nicht geladen werden.",
             status: stationResponse.status,
           },
           {
@@ -1060,7 +1068,7 @@ export default {
         console.error("Station API read failed", {
           message: error instanceof Error ? error.message : String(error),
         });
-        return jsonResponse({ error: "Unable to read station response." }, { status: 502 });
+        return jsonResponse({ error: "Stationsantwort konnte nicht gelesen werden." }, { status: 502 });
       }
 
       console.log("Station API payload received", {

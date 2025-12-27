@@ -106,7 +106,7 @@ export class AdminConfigComponent {
     const query = this.stationQuery.value.trim();
 
     if (!query) {
-      this.errorMessage.set('Enter a station name or code to search.');
+      this.errorMessage.set('Bitte Stationsname oder Code zum Suchen eingeben.');
       this.requestStatus.set('error');
       return;
     }
@@ -130,7 +130,7 @@ export class AdminConfigComponent {
         },
         error: (error: HttpErrorResponse) => {
           this.requestStatus.set('error');
-          this.errorMessage.set(error.message || 'Unable to reach the worker.');
+          this.errorMessage.set(error.message || 'Worker ist nicht erreichbar.');
         }
       });
   }
@@ -156,7 +156,7 @@ export class AdminConfigComponent {
         }
       },
       error: (error: HttpErrorResponse) => {
-        this.saveErrorMessage.set(error.message || 'Unable to save tracked station.');
+        this.saveErrorMessage.set(error.message || 'Verfolgte Station konnte nicht gespeichert werden.');
         this.savingEvaIds.update((ids) => ids.filter((id) => id !== station.evaId));
       },
       complete: () => {
@@ -180,7 +180,7 @@ export class AdminConfigComponent {
   protected discoverRoutes(): void {
     const evaId = this.selectedStationEvaId();
     if (!evaId) {
-      this.routeErrorMessage.set('Choose a tracked station first.');
+      this.routeErrorMessage.set('Bitte zuerst eine verfolgte Station auswählen.');
       this.routeRequestStatus.set('error');
       return;
     }
@@ -196,12 +196,12 @@ export class AdminConfigComponent {
           this.routeRequestStatus.set('success');
         },
         error: (error: HttpErrorResponse) => {
-          this.routeErrorMessage.set(error.message || 'Unable to discover routes.');
+          this.routeErrorMessage.set(error.message || 'Routen konnten nicht gefunden werden.');
           this.routeRequestStatus.set('error');
         }
       });
     } catch (error: unknown) {
-      this.routeErrorMessage.set(error instanceof Error ? error.message : 'Unable to reach the worker.');
+      this.routeErrorMessage.set(error instanceof Error ? error.message : 'Worker ist nicht erreichbar.');
       this.routeRequestStatus.set('error');
     }
   }
@@ -232,7 +232,7 @@ export class AdminConfigComponent {
             }
           },
           error: (error: HttpErrorResponse) => {
-            this.trackedRoutesErrorMessage.set(error.message || 'Unable to save tracked route.');
+            this.trackedRoutesErrorMessage.set(error.message || 'Verfolgte Route konnte nicht gespeichert werden.');
             this.savingRouteKeys.update((keys) =>
               keys.filter((key) => key !== this.routeKey(route.line, route.origin, route.destination))
             );
@@ -244,7 +244,7 @@ export class AdminConfigComponent {
           }
         });
     } catch (error: unknown) {
-      this.trackedRoutesErrorMessage.set(error instanceof Error ? error.message : 'Unable to reach the worker.');
+      this.trackedRoutesErrorMessage.set(error instanceof Error ? error.message : 'Worker ist nicht erreichbar.');
       this.savingRouteKeys.update((keys) =>
         keys.filter((key) => key !== this.routeKey(route.line, route.origin, route.destination))
       );
@@ -268,12 +268,12 @@ export class AdminConfigComponent {
           this.trackedRoutesRequestStatus.set('success');
         },
         error: (error: HttpErrorResponse) => {
-          this.trackedRoutesErrorMessage.set(error.message || 'Unable to load tracked routes.');
+          this.trackedRoutesErrorMessage.set(error.message || 'Verfolgte Routen konnten nicht geladen werden.');
           this.trackedRoutesRequestStatus.set('error');
         }
       });
     } catch (error: unknown) {
-      this.trackedRoutesErrorMessage.set(error instanceof Error ? error.message : 'Unable to reach the worker.');
+      this.trackedRoutesErrorMessage.set(error instanceof Error ? error.message : 'Worker ist nicht erreichbar.');
       this.trackedRoutesRequestStatus.set('error');
     }
   }
@@ -315,7 +315,7 @@ export class AdminConfigComponent {
     if (!draft.label.trim() || Number.isNaN(minutes) || minutes <= 0) {
       this.travelTimeErrorMessageByRoute.update((errors) => ({
         ...errors,
-        [route.id]: 'Enter a label and a positive number of minutes.'
+        [route.id]: 'Bitte eine Bezeichnung und eine positive Minutenanzahl eingeben.'
       }));
       return;
     }
@@ -359,7 +359,7 @@ export class AdminConfigComponent {
           error: (error: HttpErrorResponse) => {
             this.travelTimeErrorMessageByRoute.update((errors) => ({
               ...errors,
-              [route.id]: error.message || 'Unable to save travel time.'
+              [route.id]: error.message || 'Wegzeit konnte nicht gespeichert werden.'
             }));
             this.savingTravelTimeRouteIds.update((ids) => ids.filter((id) => id !== route.id));
           },
@@ -370,7 +370,7 @@ export class AdminConfigComponent {
     } catch (error: unknown) {
       this.travelTimeErrorMessageByRoute.update((errors) => ({
         ...errors,
-        [route.id]: error instanceof Error ? error.message : 'Unable to reach the worker.'
+        [route.id]: error instanceof Error ? error.message : 'Worker ist nicht erreichbar.'
       }));
       this.savingTravelTimeRouteIds.update((ids) => ids.filter((id) => id !== route.id));
     }
@@ -382,9 +382,8 @@ export class AdminConfigComponent {
       endpoint.searchParams.set('query', query);
       return endpoint.toString();
     } catch (error: unknown) {
-      const message = `Invalid worker API base URL: ${workerApiBaseUrl}`;
       this.requestStatus.set('error');
-      this.errorMessage.set(message);
+      this.errorMessage.set(`Ungültige Worker-API-Basis-URL: ${workerApiBaseUrl}`);
       return null;
     }
   }
@@ -394,8 +393,7 @@ export class AdminConfigComponent {
       const endpoint = new URL('/api/tracked-stations', workerApiBaseUrl);
       return endpoint.toString();
     } catch (error: unknown) {
-      const message = `Invalid worker API base URL: ${workerApiBaseUrl}`;
-      this.saveErrorMessage.set(message);
+      this.saveErrorMessage.set(`Ungültige Worker-API-Basis-URL: ${workerApiBaseUrl}`);
       return null;
     }
   }
@@ -425,7 +423,7 @@ export class AdminConfigComponent {
         error: (error: HttpErrorResponse) => {
           this.travelTimeErrorMessageByRoute.update((errors) => ({
             ...errors,
-            [routeId]: error.message || 'Unable to load travel times.'
+            [routeId]: error.message || 'Wegzeiten konnten nicht geladen werden.'
           }));
           this.travelTimeRequestStatusByRoute.update((statuses) => ({
             ...statuses,
@@ -436,7 +434,7 @@ export class AdminConfigComponent {
     } catch (error: unknown) {
       this.travelTimeErrorMessageByRoute.update((errors) => ({
         ...errors,
-        [routeId]: error instanceof Error ? error.message : 'Unable to reach the worker.'
+        [routeId]: error instanceof Error ? error.message : 'Worker ist nicht erreichbar.'
       }));
       this.travelTimeRequestStatusByRoute.update((statuses) => ({
         ...statuses,
@@ -463,5 +461,18 @@ export class AdminConfigComponent {
 
   private routeKey(line: string, origin: string, destination: string): string {
     return `${line}::${origin}::${destination}`.toLowerCase();
+  }
+
+  protected displayRequestStatus(status: RequestState): string {
+    switch (status) {
+      case 'loading':
+        return 'lädt';
+      case 'success':
+        return 'ok';
+      case 'error':
+        return 'fehler';
+      default:
+        return 'bereit';
+    }
   }
 }
