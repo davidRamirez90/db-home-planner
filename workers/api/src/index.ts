@@ -829,6 +829,13 @@ export default {
           );
         }
 
+        console.log("Fetched timetable XML for station", {
+          stationEvaId,
+          planBytes: planXml.length,
+          nextPlanBytes: nextPlanXml.length,
+          changesBytes: changesXml.length,
+        });
+
         const stops = [...parsePlanStopsFromXml(planXml), ...parsePlanStopsFromXml(nextPlanXml)];
         const changes = changesXml ? parseChangesByStopId(changesXml) : new Map();
 
