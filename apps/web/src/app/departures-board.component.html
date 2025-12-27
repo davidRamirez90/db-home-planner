@@ -5,30 +5,30 @@
       <span>{{ boardTitle() }}</span>
     </div>
     <div class="board-meta">
-      <span class="board-label">Status</span>
+      <span class="board-label">STATUS</span>
       <span class="board-status" [attr.data-status]="requestStatus()">
-        {{ requestStatus() }}
+        {{ displayStatus() }}
       </span>
     </div>
   </header>
 
   @if (errorMessage()) {
-    <p class="board-error">{{ errorMessage() }}</p>
+    <p class="board-error">{{ displayErrorMessage() }}</p>
   }
 
   @if (!errorMessage() && requestStatus() === 'success' && boardRows().length === 0) {
-    <p class="board-empty">No tracked routes yet. Add one in the admin config.</p>
+    <p class="board-empty">NO TRACKED ROUTES YET. ADD ONE IN THE ADMIN CONFIG.</p>
   }
 
   <div class="board-grid" role="table" aria-label="Departures overview">
     <div class="board-row board-row--header" role="row">
-      <span class="board-cell" role="columnheader">Station</span>
-      <span class="board-cell" role="columnheader">Time</span>
-      <span class="board-cell" role="columnheader">Line</span>
-      <span class="board-cell" role="columnheader">Destination</span>
-      <span class="board-cell" role="columnheader">Platform</span>
-      <span class="board-cell" role="columnheader">Status</span>
-      <span class="board-cell" role="columnheader">Action</span>
+      <span class="board-cell" role="columnheader">STATION</span>
+      <span class="board-cell" role="columnheader">TIME</span>
+      <span class="board-cell" role="columnheader">LINE</span>
+      <span class="board-cell" role="columnheader">DESTINATION</span>
+      <span class="board-cell" role="columnheader">PLATFORM</span>
+      <span class="board-cell" role="columnheader">STATUS</span>
+      <span class="board-cell" role="columnheader">ACTION</span>
     </div>
 
     @for (row of boardRows(); track $index) {

@@ -15,17 +15,24 @@ export class DeparturesBoardComponent {
   protected readonly requestStatus = this.departuresService.requestStatus;
   protected readonly errorMessage = this.departuresService.errorMessage;
   protected readonly departures = this.departuresService.departures;
-  protected readonly boardTitle = signal('Departures');
+  protected readonly boardTitle = signal('DEPARTURES');
+
+  protected readonly displayStatus = computed(() => this.requestStatus().toUpperCase());
+
+  protected readonly displayErrorMessage = computed(() => {
+    const message = this.errorMessage();
+    return message ? message.toUpperCase() : '';
+  });
 
   protected readonly boardRows = computed(() => {
     return this.departures().map((departure) => ({
-      station: departure.stationName,
-      departure: departure.time,
-      line: departure.line,
-      destination: departure.destination,
-      platform: departure.platform,
-      status: departure.status,
-      action: departure.action
+      station: this.toDisplayValue(departure.stationName),
+      departure: this.toDisplayValue(departure.time),
+      line: this.toDisplayValue(departure.line),
+      destination: this.toDisplayValue(departure.destination),
+      platform: this.toDisplayValue(departure.platform),
+      status: this.toDisplayValue(departure.status),
+      action: this.toDisplayValue(departure.action)
     }));
   });
 
@@ -34,7 +41,15 @@ export class DeparturesBoardComponent {
       return [' '];
     }
 
-    return Array.from(value);
+    return Array.from(value.toUpperCase());
+  }
+
+  private toDisplayValue(value: string): string {
+    if (!value) {
+      return '';
+    }
+
+    return value.toUpperCase();
   }
 
   constructor() {
