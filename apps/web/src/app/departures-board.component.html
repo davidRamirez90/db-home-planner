@@ -35,56 +35,56 @@
       <div class="board-row" role="row">
         <span class="board-cell" role="cell">
           <span class="board-text" aria-hidden="true">
-            @for (char of toChars(row.station); track $index) {
-              <app-segment-display [value]="char" />
+            @for (char of toChars(row.station); track $index; let i = $index) {
+              <app-segment-display [value]="char" [delayMs]="i * 35" />
             }
           </span>
           <span class="sr-only">{{ row.station }}</span>
         </span>
         <span class="board-cell" role="cell">
           <span class="board-text" aria-hidden="true">
-            @for (char of toChars(row.departure); track $index) {
-              <app-segment-display [value]="char" />
+            @for (char of toChars(row.departure); track $index; let i = $index) {
+              <app-segment-display [value]="char" [delayMs]="i * 35" />
             }
           </span>
           <span class="sr-only">{{ row.departure }}</span>
         </span>
         <span class="board-cell" role="cell">
           <span class="board-text" aria-hidden="true">
-            @for (char of toChars(row.line); track $index) {
-              <app-segment-display [value]="char" />
+            @for (char of toChars(row.line); track $index; let i = $index) {
+              <app-segment-display [value]="char" [delayMs]="i * 35" />
             }
           </span>
           <span class="sr-only">{{ row.line }}</span>
         </span>
         <span class="board-cell" role="cell">
           <span class="board-text" aria-hidden="true">
-            @for (char of toChars(row.destination); track $index) {
-              <app-segment-display [value]="char" />
+            @for (char of toChars(row.destination); track $index; let i = $index) {
+              <app-segment-display [value]="char" [delayMs]="i * 35" />
             }
           </span>
           <span class="sr-only">{{ row.destination }}</span>
         </span>
         <span class="board-cell" role="cell">
           <span class="board-text" aria-hidden="true">
-            @for (char of toChars(row.platform); track $index) {
-              <app-segment-display [value]="char" />
+            @for (char of toChars(row.platform); track $index; let i = $index) {
+              <app-segment-display [value]="char" [delayMs]="i * 35" />
             }
           </span>
           <span class="sr-only">{{ row.platform }}</span>
         </span>
         <span class="board-cell" role="cell">
           <span class="board-text" aria-hidden="true">
-            @for (char of toChars(row.status); track $index) {
-              <app-segment-display [value]="char" />
+            @for (char of toChars(row.status); track $index; let i = $index) {
+              <app-segment-display [value]="char" [delayMs]="i * 35" />
             }
           </span>
           <span class="sr-only">{{ row.status }}</span>
         </span>
         <span class="board-cell" role="cell">
           <span class="board-text" aria-hidden="true">
-            @for (char of toChars(row.action); track $index) {
-              <app-segment-display [value]="char" />
+            @for (char of toChars(row.action); track $index; let i = $index) {
+              <app-segment-display [value]="char" [delayMs]="i * 35" />
             }
           </span>
           <span class="sr-only">{{ row.action }}</span>

@@ -12,6 +12,7 @@
   color: #f7e7b1;
   text-transform: uppercase;
   perspective: 700px;
+  --flap-duration: 360ms;
 }
 
 .split-flap__panel {
@@ -33,11 +34,16 @@
 .split-flap__panel--top {
   top: 0;
   border-bottom: none;
+  align-items: flex-end;
+  padding-bottom: 0.05em;
+  transform: translateZ(-1px);
 }
 
 .split-flap__panel--bottom {
   bottom: 0;
   border-top: none;
+  align-items: flex-start;
+  padding-top: 0.05em;
 }
 
 .split-flap__flip {
@@ -59,12 +65,15 @@
   border: 1px solid #3a2f1c;
   backface-visibility: hidden;
   overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .split-flap__flip-top {
   top: 0;
   transform-origin: bottom;
   border-bottom: none;
+  align-items: flex-end;
+  padding-bottom: 0.05em;
 }
 
 .split-flap__flip-bottom {
@@ -72,44 +81,68 @@
   transform-origin: top;
   border-top: none;
   transform: rotateX(90deg);
+  align-items: flex-start;
+  padding-top: 0.05em;
 }
 
 .split-flap__flip--a .split-flap__flip-top {
-  animation: flap-top 420ms ease-in-out;
+  animation: flap-top var(--flap-duration) linear;
 }
 
 .split-flap__flip--a .split-flap__flip-bottom {
-  animation: flap-bottom 420ms ease-in-out;
+  animation: flap-bottom var(--flap-duration) linear;
 }
 
 .split-flap__flip--b .split-flap__flip-top {
-  animation: flap-top 420ms ease-in-out;
+  animation: flap-top var(--flap-duration) linear;
 }
 
 .split-flap__flip--b .split-flap__flip-bottom {
-  animation: flap-bottom 420ms ease-in-out;
+  animation: flap-bottom var(--flap-duration) linear;
+}
+
+.split-flap::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% - 1px);
+  height: 2px;
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  z-index: 3;
 }
 
 @keyframes flap-top {
   0% {
     transform: rotateX(0deg);
+    filter: brightness(1);
   }
-  50% {
+  70% {
     transform: rotateX(-90deg);
+    filter: brightness(0.85);
   }
   100% {
     transform: rotateX(-90deg);
+    filter: brightness(0.78);
   }
 }
 
 @keyframes flap-bottom {
   0% {
     transform: rotateX(90deg);
+    filter: brightness(0.75);
   }
-  50% {
+  60% {
     transform: rotateX(90deg);
+    filter: brightness(0.75);
+  }
+  90% {
+    transform: rotateX(8deg);
+    filter: brightness(0.9);
   }
   100% {
     transform: rotateX(0deg);
+    filter: brightness(1);
   }
 }

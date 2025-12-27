@@ -1,6 +1,6 @@
 <span class="split-flap" [attr.data-char]="currentChar()">
   <span class="split-flap__panel split-flap__panel--top">{{ currentChar() }}</span>
-  <span class="split-flap__panel split-flap__panel--bottom">{{ currentChar() }}</span>
+  <span class="split-flap__panel split-flap__panel--bottom">{{ previousChar() }}</span>
   <span
     class="split-flap__flip"
     [class.split-flap__flip--a]="flipMode() === 'a'"
