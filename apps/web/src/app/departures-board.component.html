@@ -5,12 +5,6 @@
       <span>{{ boardTitle() }}</span>
     </div>
     <div class="board-right">
-      <div class="board-meta">
-        <span class="board-label">STATUS</span>
-        <span class="board-status" [attr.data-status]="requestStatus()">
-          {{ displayStatus() }}
-        </span>
-      </div>
       <div class="board-clock">
         @if (showSegmentDisplay) {
           <span class="board-clock-segments" aria-hidden="true">
@@ -43,6 +37,12 @@
       <span class="board-cell" role="columnheader">STATUS</span>
       <span class="board-cell board-cell--action" role="columnheader">AKTION</span>
     </div>
+
+    @if (requestStatus() === 'loading') {
+      <div class="board-row board-row--loading" role="row">
+        <span class="board-cell board-cell--loading" role="cell">LÄDT…</span>
+      </div>
+    }
 
     @for (row of boardRows(); track $index) {
       <div class="board-row" role="row">

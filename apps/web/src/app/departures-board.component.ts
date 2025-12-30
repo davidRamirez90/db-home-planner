@@ -12,7 +12,6 @@ import { DepartureEntry } from './departure-types';
 import { DeparturesService } from './departures.service';
 import { formatLineLabel } from './line-format';
 import { OverflowScrollDirective } from './overflow-scroll.directive';
-import { RequestState } from './station-types';
 import { SegmentDisplayComponent } from './segment-display.component';
 
 const COUNTDOWN_INTERVAL_MS = 5000;
@@ -41,7 +40,6 @@ export class DeparturesBoardComponent {
   private readonly now = signal(Date.now());
   private readonly lastRefresh = signal(0);
 
-  protected readonly displayStatus = computed(() => this.formatStatus(this.requestStatus()));
   protected readonly displayClock = computed(() => this.formatClock(this.now()));
 
   protected readonly displayErrorMessage = computed(() => {
@@ -146,19 +144,6 @@ export class DeparturesBoardComponent {
     const hours = current.getHours().toString().padStart(2, '0');
     const minutes = current.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
-  }
-
-  private formatStatus(status: RequestState): string {
-    switch (status) {
-      case 'loading':
-        return 'LÄDT';
-      case 'success':
-        return 'OK';
-      case 'error':
-        return 'FEHLER';
-      default:
-        return 'BEREIT';
-    }
   }
 
   constructor() {

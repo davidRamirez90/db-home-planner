@@ -47,44 +47,6 @@
   gap: 1.2rem;
 }
 
-.board-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  color: var(--ink-muted);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.25em;
-  font-weight: 600;
-}
-
-.board-label {
-  color: var(--ink-muted);
-}
-
-.board-status {
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  border: 2px solid var(--ink-dark);
-  color: var(--ink-dark);
-  background: var(--ink-light);
-  font-weight: 700;
-}
-
-.board-status[data-status='loading'] {
-  background: var(--ink-mid);
-}
-
-.board-status[data-status='success'] {
-  background: var(--ink-dark);
-  color: var(--ink-light);
-}
-
-.board-status[data-status='error'] {
-  background: var(--ink-dark);
-  color: var(--ink-light);
-}
-
 .board-clock {
   display: flex;
   align-items: center;
@@ -158,6 +120,17 @@
   min-height: 2.6rem;
 }
 
+.board-row--loading .board-cell {
+  justify-content: center;
+  text-align: center;
+  letter-spacing: 0.28em;
+  background: var(--ink-mid);
+}
+
+.board-cell--loading {
+  grid-column: 1 / -1;
+}
+
 .board-text {
   display: block;
   letter-spacing: 0.06em;
@@ -227,9 +200,6 @@
 .board-action-text {
   display: inline-block;
   padding-right: 2rem;
-  font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
 }
 
 .board-action.is-overflowing .board-action-text {
