@@ -1,11 +1,12 @@
 # Project TODOs
 
 ## 1) Product discovery & requirements
-- Confirm Timetables API authentication, rate limits, and allowed usage.
-- Validate which Timetables endpoints we can use:
-  - Station lookup (`/station/{pattern}`)
-  - Planned timetable (`/plan/{evaNo}/{date}/{hour}`)
-  - Full/recent changes (`/fchg/{evaNo}`, `/rchg/{evaNo}`)
+- Confirm VRR EFA usage expectations (rate limits, allowed usage).
+- Validate which VRR endpoints we can use:
+  - Stop finder (`XML_STOPFINDER_REQUEST`)
+  - Departure monitor (`XML_DM_REQUEST`)
+  - Trip request (`XML_TRIP_REQUEST2`) for route detail if needed
+- Decide how monthly GTFS snapshots are ingested/refreshed.
 - Define the initial data model:
   - Stations (EVA, DS100, name)
   - Route selection per station (trip labels, line, destination/direction)
@@ -27,9 +28,9 @@
 ## 3) Backend foundations (Cloudflare Workers)
 - Scaffold Worker in `workers/api`.
 - Define API endpoints:
-  - ✅ `GET /api/stations` (proxy `/station/{pattern}`)
-  - ✅ `GET /api/departures` (plan + changes merge)
-  - ✅ `GET /api/routes` (proxy `/plan/{evaNo}/{date}/{hour}` for route discovery)
+  - ✅ `GET /api/stations` (VRR GTFS-based station lookup)
+  - ✅ `GET /api/departures` (VRR DM realtime)
+  - ✅ `GET /api/routes` (GTFS-based route discovery)
   - ✅ `GET /api/tracked-stations`
   - ✅ `POST /api/tracked-stations`
   - ✅ `GET /api/tracked-routes`
@@ -43,11 +44,11 @@
 - Add KV for caching planned slices and real-time changes.
 - Implement DAO layer in `packages/shared` or `workers/api`.
 
-## 5) Deutsche Bahn Timetables integration
-- Implement a data ingestion module in Workers for Timetables.
-- Parse XML responses into normalized DTOs.
-- Merge planned data (`/plan`) with changes (`/fchg`, `/rchg`).
-- Handle cancellations, platform changes, and delays.
+## 5) VRR GTFS + EFA integration
+- ✅ Build Dortmund GTFS station + route index.
+- ✅ Use VRR DM for realtime departures.
+- Implement optional trip-detail lookup via `XML_TRIP_REQUEST2`.
+- Handle cancellations, platform changes, and delays from VRR responses.
 
 ## 6) Business logic
 - Calculate leave-home recommendations based on travel profiles and departure times.

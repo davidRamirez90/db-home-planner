@@ -1,3 +1,5 @@
+import { dortmundStationIndex } from "./vrr-dortmund-index";
+
 const corsHeaders = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET, POST, OPTIONS",
@@ -10,9 +12,6 @@ const jsonHeaders = {
 };
 
 type Env = {
-  DB_API_BASE_URL: string;
-  DB_API_KEY: string;
-  DB_API_CLIENT_ID: string;
   D1_DB_PLANNER: D1Database;
 };
 
@@ -40,6 +39,18 @@ type RouteCandidate = {
   destination: string;
 };
 
+type DortmundStation = {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+};
+
+type DortmundStationIndex = {
+  stations: DortmundStation[];
+  routesByStationId: Record<string, RouteCandidate[]>;
+};
+
 type TrackedRouteRow = {
   id: string;
   station_eva_id: string;
@@ -64,21 +75,43 @@ type TravelTimeRow = {
   minutes: number;
 };
 
-type PlanStop = {
-  id: string;
-  line: string;
-  origin: string;
-  destination: string;
-  plannedTime: string;
-  platform: string;
+type VrrStopEvent = {
+  realtimeStatus?: string[];
+  location?: {
+    properties?: {
+      platform?: string;
+      platformName?: string;
+    };
+  };
+  departureTimePlanned?: string;
+  departureTimeEstimated?: string;
+  transportation?: {
+    name?: string;
+    disassembledName?: string;
+    number?: string;
+    destination?: {
+      name?: string;
+    };
+    origin?: {
+      name?: string;
+    };
+  };
 };
 
-type ChangeStop = {
-  id: string;
-  changedTime?: string;
-  platform?: string;
-  cancelled: boolean;
+type NormalizedVrrEvent = {
+  line: string;
+  lineNormalized: string;
+  origin: string;
+  destination: string;
+  destinationNormalized: string;
+  timeValue: string;
+  timeDate: Date;
+  platform: string;
+  status: string;
+  isCancelled: boolean;
 };
+
+const dortmundIndex = dortmundStationIndex as DortmundStationIndex;
 
 const jsonResponse = (payload: unknown, init?: ResponseInit) =>
   new Response(JSON.stringify(payload), {
@@ -86,43 +119,110 @@ const jsonResponse = (payload: unknown, init?: ResponseInit) =>
     ...init,
   });
 
-const parseAttributesFromXml = (attributeBlock: string): Record<string, string> => {
-  const attributes: Record<string, string> = {};
+const berlinTimeFormatter = new Intl.DateTimeFormat("de-DE", {
+  timeZone: "Europe/Berlin",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
 
-  for (const attributeMatch of attributeBlock.matchAll(/([\w-]+)\s*=\s*(['"])(.*?)\2/g)) {
-    const key = attributeMatch[1];
-    const value = attributeMatch[3] ?? "";
-    if (key) {
-      attributes[key] = value;
-    }
+const normalizeSearchText = (value: string): string =>
+  value
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const normalizeRouteEndpoint = (value: string): string =>
+  normalizeSearchText(value)
+    .replace(/^dortmund\s+/i, "")
+    .replace(/^do\s+/i, "")
+    .trim();
+
+const normalizeLineValue = (value: string): string =>
+  value
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/^u-bahn/, "")
+    .replace(/^s-bahn/, "")
+    .trim();
+
+const matchesRouteEndpoint = (routeValue: string, eventValue: string): boolean => {
+  if (!routeValue || !eventValue) {
+    return false;
   }
-
-  return attributes;
+  return (
+    routeValue === eventValue ||
+    routeValue.startsWith(eventValue) ||
+    eventValue.startsWith(routeValue)
+  );
 };
 
-const parseTimetableStationName = (xmlPayload: string): string | undefined => {
-  const timetableMatch = xmlPayload.match(/<timetable\s+([^>]+?)>/i);
-  const attributes = parseAttributesFromXml(timetableMatch?.[1] ?? "");
-  const stationName = attributes.station?.trim();
-  return stationName || undefined;
+const getBerlinDateTimeParts = (): { date: string; time: string } => {
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Berlin",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(new Date());
+  const valueFor = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  const year = valueFor("year");
+  const month = valueFor("month");
+  const day = valueFor("day");
+  const hour = valueFor("hour");
+  const minute = valueFor("minute");
+  return {
+    date: `${year}${month}${day}`,
+    time: `${hour}${minute}`,
+  };
 };
 
-const parsePathSegments = (rawPath?: string): string[] => {
-  if (!rawPath) {
-    return [];
-  }
-  return rawPath
-    .split("|")
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-};
+const fetchVrrStopEvents = async (stationId: string): Promise<VrrStopEvent[]> => {
+  const { date, time } = getBerlinDateTimeParts();
+  const dmUrl = new URL("https://www.vrr.de/vrr-efa/XML_DM_REQUEST");
+  dmUrl.searchParams.set("outputFormat", "rapidJSON");
+  dmUrl.searchParams.set("language", "de");
+  dmUrl.searchParams.set("useRealtime", "1");
+  dmUrl.searchParams.set("name_dm", stationId);
+  dmUrl.searchParams.set("type_dm", "any");
+  dmUrl.searchParams.set("itdDate", date);
+  dmUrl.searchParams.set("itdTime", time);
+  dmUrl.searchParams.set("itdTimeOffset", "0");
+  dmUrl.searchParams.set("mode", "direct");
 
-const parsePathEndpoint = (rawPath?: string, position: "first" | "last"): string | undefined => {
-  const segments = parsePathSegments(rawPath);
-  if (!segments.length) {
-    return undefined;
+  let response: Response;
+  try {
+    response = await fetch(dmUrl.toString());
+  } catch (error) {
+    console.error("VRR DM fetch failed", {
+      stationId,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    throw new Error("VRR-Daten konnten nicht geladen werden.");
   }
-  return position === "first" ? segments[0] : segments[segments.length - 1];
+
+  if (!response.ok) {
+    console.error("VRR DM response error", {
+      stationId,
+      status: response.status,
+    });
+    throw new Error("VRR-Daten konnten nicht geladen werden.");
+  }
+
+  try {
+    const payload = (await response.json()) as { stopEvents?: VrrStopEvent[] };
+    return payload.stopEvents ?? [];
+  } catch (error) {
+    console.error("VRR DM response parse failed", {
+      stationId,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    throw new Error("VRR-Daten konnten nicht gelesen werden.");
+  }
 };
 
 const normalizeStationName = (value: string): string => {
@@ -131,55 +231,6 @@ const normalizeStationName = (value: string): string => {
   }
   const stripped = value.replaceAll("Dortmund-", "");
   return stripped.replace(/\s{2,}/g, " ").trim();
-};
-
-const parseStationsFromXml = (xmlPayload: string): StationAttributes[] => {
-  const stations: StationAttributes[] = [];
-  const stationMatches = xmlPayload.matchAll(/<station\s+([^>]+?)\/?>/gi);
-
-  for (const match of stationMatches) {
-    const attributeBlock = match[1] ?? "";
-    const attributes = parseAttributesFromXml(attributeBlock);
-
-    if (!attributes.eva && !attributes.name && !attributes.ds100) {
-      continue;
-    }
-
-    stations.push({
-      evaId: attributes.eva ?? "",
-      name: normalizeStationName(attributes.name ?? ""),
-      ds100: attributes.ds100 || undefined,
-    });
-  }
-
-  return stations;
-};
-
-const parseRoutesFromPlanXml = (xmlPayload: string): RouteCandidate[] => {
-  const routes = new Map<string, RouteCandidate>();
-  const stops = parsePlanStopsFromXml(xmlPayload);
-
-  for (const stop of stops) {
-    if (!stop.origin || !stop.destination) {
-      continue;
-    }
-
-    const key = `${stop.line}::${stop.origin}::${stop.destination}`.toLowerCase();
-    if (!routes.has(key)) {
-      routes.set(key, { line: stop.line, origin: stop.origin, destination: stop.destination });
-    }
-  }
-
-  return Array.from(routes.values()).sort((a, b) => {
-    if (a.line === b.line) {
-      const destinationComparison = a.destination.localeCompare(b.destination);
-      if (destinationComparison !== 0) {
-        return destinationComparison;
-      }
-      return a.origin.localeCompare(b.origin);
-    }
-    return a.line.localeCompare(b.line);
-  });
 };
 
 const getBerlinDateHour = (): { date: string; hour: string } => {
@@ -203,38 +254,6 @@ const getBerlinDateHour = (): { date: string; hour: string } => {
   };
 };
 
-const getBerlinNowUtc = (): Date => {
-  const formatter = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Berlin",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-  const parts = formatter.formatToParts(new Date());
-  const valueFor = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
-  const year = Number(valueFor("year"));
-  const month = Number(valueFor("month"));
-  const day = Number(valueFor("day"));
-  const hour = Number(valueFor("hour"));
-  const minute = Number(valueFor("minute"));
-  const second = Number(valueFor("second"));
-  return new Date(Date.UTC(year, month - 1, day, hour, minute, second));
-};
-
-const formatBerlinDateHourFromDate = (date: Date): { date: string; hour: string } => {
-  const year = String(date.getUTCFullYear()).slice(-2);
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const hour = String(date.getUTCHours()).padStart(2, "0");
-  return {
-    date: `${year}${month}${day}`,
-    hour,
-  };
-};
 
 const parseDbDateTimeToUtc = (value: string): Date | null => {
   if (!/^\d{10,12}$/.test(value)) {
@@ -259,141 +278,18 @@ const formatDisplayTime = (value?: string): string => {
   if (!value) {
     return "—";
   }
-  const time = value.slice(-4);
-  if (!/^\d{4}$/.test(time)) {
+
+  if (/^\d{10,12}$/.test(value)) {
+    const parsed = parseDbDateTimeToUtc(value);
+    return parsed ? berlinTimeFormatter.format(parsed) : "—";
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
     return "—";
   }
-  return `${time.slice(0, 2)}:${time.slice(2)}`;
-};
 
-const parsePlanStopsFromXml = (xmlPayload: string): PlanStop[] => {
-  const stops: PlanStop[] = [];
-  const stationName = parseTimetableStationName(xmlPayload);
-  const stopMatches = xmlPayload.matchAll(/<s\s+([^>]+)>([\s\S]*?)<\/s>/gi);
-
-  for (const match of stopMatches) {
-    const stopAttributes = parseAttributesFromXml(match[1] ?? "");
-    const id = stopAttributes.id?.trim();
-    if (!id) {
-      continue;
-    }
-
-    const stopBody = match[2] ?? "";
-    const departureMatch = stopBody.match(/<dp\s+([^>]+?)\/?>/i);
-    if (!departureMatch) {
-      continue;
-    }
-
-    const departureAttributes = parseAttributesFromXml(departureMatch[1] ?? "");
-    const line = departureAttributes.l?.trim() || departureAttributes.n?.trim();
-    const destination = parsePathEndpoint(departureAttributes.ppth?.trim(), "last") || "";
-    const plannedTime = departureAttributes.pt?.trim() || departureAttributes.pdt?.trim() || "";
-    const platform = departureAttributes.pp?.trim() || departureAttributes.p?.trim() || "";
-
-    if (!line || !destination || !plannedTime) {
-      continue;
-    }
-
-    const arrivalMatch = stopBody.match(/<ar\s+([^>]+?)\/?>/i);
-    const arrivalAttributes = parseAttributesFromXml(arrivalMatch?.[1] ?? "");
-    const origin = parsePathEndpoint(arrivalAttributes.ppth?.trim(), "first") || stationName || "";
-
-    stops.push({
-      id,
-      line,
-      origin,
-      destination,
-      plannedTime,
-      platform,
-    });
-  }
-
-  return stops;
-};
-
-const parseChangesByStopId = (xmlPayload: string): Map<string, ChangeStop> => {
-  const changes = new Map<string, ChangeStop>();
-  const stopMatches = xmlPayload.matchAll(/<s\s+([^>]+)>([\s\S]*?)<\/s>/gi);
-
-  for (const match of stopMatches) {
-    const stopAttributes = parseAttributesFromXml(match[1] ?? "");
-    const id = stopAttributes.id?.trim();
-    if (!id) {
-      continue;
-    }
-
-    const stopBody = match[2] ?? "";
-    const departureMatch = stopBody.match(/<dp\s+([^>]+?)\/?>/i);
-    if (!departureMatch) {
-      continue;
-    }
-
-    const departureAttributes = parseAttributesFromXml(departureMatch[1] ?? "");
-    const changedTime = departureAttributes.ct?.trim() || undefined;
-    const platform = departureAttributes.cp?.trim() || undefined;
-    const cancellationFlag = departureAttributes.cs?.trim() || departureAttributes.c?.trim() || "";
-    const cancelled =
-      cancellationFlag.toLowerCase() === "c" ||
-      cancellationFlag.toLowerCase() === "cancelled" ||
-      cancellationFlag === "1";
-
-    changes.set(id, {
-      id,
-      changedTime,
-      platform,
-      cancelled,
-    });
-  }
-
-  return changes;
-};
-
-const isValidDateParam = (value: string) => /^\d{6}$/.test(value);
-const isValidHourParam = (value: string) => /^\d{2}$/.test(value);
-
-const fetchTimetableXml = async ({
-  url,
-  env,
-  errorMessage,
-}: {
-  url: URL;
-  env: Env;
-  errorMessage: string;
-}): Promise<string> => {
-  let response: Response;
-
-  try {
-    response = await fetch(url.toString(), {
-      headers: {
-        "DB-Client-ID": env.DB_API_CLIENT_ID,
-        "DB-Api-Key": env.DB_API_KEY,
-      },
-    });
-  } catch (error) {
-    console.error("Timetable API fetch failed", {
-      message: error instanceof Error ? error.message : String(error),
-      url: url.toString(),
-    });
-    throw new Error(errorMessage);
-  }
-
-  if (!response.ok) {
-    console.log("Timetable API response error", {
-      status: response.status,
-      url: url.toString(),
-    });
-    throw new Error(errorMessage);
-  }
-
-  try {
-    return await response.text();
-  } catch (error) {
-    console.error("Timetable API read failed", {
-      message: error instanceof Error ? error.message : String(error),
-      url: url.toString(),
-    });
-    throw new Error(errorMessage);
-  }
+  return berlinTimeFormatter.format(parsed);
 };
 
 export default {
@@ -486,98 +382,18 @@ export default {
       }
 
       const evaId = url.searchParams.get("evaId")?.trim();
-      const dateParam = url.searchParams.get("date")?.trim();
-      const hourParam = url.searchParams.get("hour")?.trim();
 
       if (!evaId) {
         return jsonResponse({ error: "Fehlender evaId-Parameter." }, { status: 400 });
       }
 
-      if (!env.DB_API_BASE_URL || !env.DB_API_KEY || !env.DB_API_CLIENT_ID) {
-        return jsonResponse(
-          {
-            error: "Fehlende DB-API-Konfiguration.",
-          },
-          { status: 500 },
-        );
-      }
-
+      const routes = dortmundIndex.routesByStationId[evaId] ?? [];
       const fallback = getBerlinDateHour();
-      const date = dateParam ?? fallback.date;
-      const hour = hourParam ?? fallback.hour;
-      if (!isValidDateParam(date) || !isValidHourParam(hour)) {
-        return jsonResponse(
-          {
-            error: "Ungültiger Datums- oder Stundenparameter.",
-          },
-          { status: 400 },
-        );
-      }
-
-      const apiUrl = new URL(env.DB_API_BASE_URL);
-      const basePath = apiUrl.pathname.replace(/\/$/, "");
-      apiUrl.pathname = `${basePath}/plan/${encodeURIComponent(evaId)}/${date}/${hour}`;
-
-      let planResponse: Response;
-
-      try {
-        console.log("Plan API request", {
-          evaId,
-          date,
-          hour,
-          url: apiUrl.toString(),
-        });
-
-        planResponse = await fetch(apiUrl.toString(), {
-          headers: {
-            "DB-Client-ID": env.DB_API_CLIENT_ID,
-            "DB-Api-Key": env.DB_API_KEY,
-          },
-        });
-      } catch (error) {
-        console.error("Plan API fetch failed", {
-          message: error instanceof Error ? error.message : String(error),
-        });
-        return jsonResponse({ error: "Plan-API ist nicht erreichbar." }, { status: 502 });
-      }
-
-      if (!planResponse.ok) {
-        console.log("Plan API response error", {
-          evaId,
-          status: planResponse.status,
-        });
-        return jsonResponse(
-          {
-            error: "Geplante Abfahrten konnten nicht geladen werden.",
-            status: planResponse.status,
-          },
-          { status: planResponse.status },
-        );
-      }
-
-      let xmlPayload = "";
-
-      try {
-        xmlPayload = await planResponse.text();
-      } catch (error) {
-        console.error("Plan API read failed", {
-          message: error instanceof Error ? error.message : String(error),
-        });
-        return jsonResponse({ error: "Plan-Antwort konnte nicht gelesen werden." }, { status: 502 });
-      }
-
-      console.log("Plan API response body", {
-        evaId,
-        status: planResponse.status,
-        body: xmlPayload,
-      });
-
-      const routes = parseRoutesFromPlanXml(xmlPayload);
 
       return jsonResponse({
         evaId,
-        date,
-        hour,
+        date: fallback.date,
+        hour: fallback.hour,
         count: routes.length,
         routes,
       });
@@ -821,16 +637,7 @@ export default {
         return jsonResponse({ error: "Methode nicht erlaubt" }, { status: 405 });
       }
 
-      if (!env.DB_API_BASE_URL || !env.DB_API_KEY || !env.DB_API_CLIENT_ID) {
-        return jsonResponse(
-          {
-            error: "Fehlende DB-API-Konfiguration.",
-          },
-          { status: 500 },
-        );
-      }
-
-        const routesResult = await env.D1_DB_PLANNER.prepare(
+      const routesResult = await env.D1_DB_PLANNER.prepare(
           `SELECT tracked_routes.id,
             tracked_routes.station_eva_id,
             tracked_routes.line,
@@ -865,103 +672,96 @@ export default {
         new Map<string, number[]>(),
       );
 
-      const now = getBerlinNowUtc();
-      const nextHourDate = new Date(now.getTime());
-      nextHourDate.setUTCHours(nextHourDate.getUTCHours() + 1);
-      const currentDateHour = getBerlinDateHour();
-      const nextDateHour = formatBerlinDateHourFromDate(nextHourDate);
-
       const stationEvaIds = Array.from(new Set(routes.map((route) => route.station_eva_id)));
-      const stationData = new Map<string, { stops: PlanStop[]; changes: Map<string, ChangeStop> }>();
+      const stationEvents = new Map<string, NormalizedVrrEvent[]>();
 
       for (const stationEvaId of stationEvaIds) {
-        const apiUrl = new URL(env.DB_API_BASE_URL);
-        const basePath = apiUrl.pathname.replace(/\/$/, "");
-
-        const planUrl = new URL(apiUrl.toString());
-        planUrl.pathname = `${basePath}/plan/${encodeURIComponent(stationEvaId)}/${currentDateHour.date}/${currentDateHour.hour}`;
-
-        const nextPlanUrl = new URL(apiUrl.toString());
-        nextPlanUrl.pathname = `${basePath}/plan/${encodeURIComponent(stationEvaId)}/${nextDateHour.date}/${nextDateHour.hour}`;
-
-        const changesUrl = new URL(apiUrl.toString());
-        changesUrl.pathname = `${basePath}/fchg/${encodeURIComponent(stationEvaId)}`;
-
-        let planXml = "";
-        let nextPlanXml = "";
-        let changesXml = "";
+        let stopEvents: VrrStopEvent[] = [];
 
         try {
-          planXml = await fetchTimetableXml({
-            url: planUrl,
-            env,
-            errorMessage: "Geplante Abfahrten konnten nicht geladen werden.",
-          });
-          nextPlanXml = await fetchTimetableXml({
-            url: nextPlanUrl,
-            env,
-            errorMessage: "Geplante Abfahrten konnten nicht geladen werden.",
-          });
-          changesXml = await fetchTimetableXml({
-            url: changesUrl,
-            env,
-            errorMessage: "Aktualisierte Abfahrten konnten nicht geladen werden.",
-          });
+          stopEvents = await fetchVrrStopEvents(stationEvaId);
         } catch (error) {
           return jsonResponse(
             {
-              error: error instanceof Error ? error.message : "Abfahrten konnten nicht geladen werden.",
+              error: error instanceof Error ? error.message : "VRR-Daten konnten nicht geladen werden.",
             },
             { status: 502 },
           );
         }
 
-        console.log("Fetched timetable XML for station", {
-          stationEvaId,
-          planBytes: planXml.length,
-          nextPlanBytes: nextPlanXml.length,
-          changesBytes: changesXml.length,
-        });
+        const normalizedEvents = stopEvents
+          .map((event) => {
+            const transportation = event.transportation;
+            const lineValue =
+              transportation?.disassembledName ||
+              transportation?.number ||
+              transportation?.name ||
+              "";
+            const destination = transportation?.destination?.name ?? "";
+            const origin = transportation?.origin?.name ?? "";
+            const timeValue =
+              event.departureTimeEstimated || event.departureTimePlanned || "";
 
-        const stops = [...parsePlanStopsFromXml(planXml), ...parsePlanStopsFromXml(nextPlanXml)];
-        const changes = changesXml ? parseChangesByStopId(changesXml) : new Map();
+            if (!lineValue || !destination || !timeValue) {
+              return null;
+            }
 
-        stationData.set(stationEvaId, { stops, changes });
-      }
+            const timeDate = new Date(timeValue);
+            if (Number.isNaN(timeDate.getTime())) {
+              return null;
+            }
 
-      const departures = routes.map((route) => {
-        const normalizedLine = route.line.toLowerCase();
-        const normalizedOrigin = route.origin.toLowerCase();
-        const normalizedDestination = route.destination.toLowerCase();
-        const stationInfo = stationData.get(route.station_eva_id);
-        const stops = stationInfo?.stops ?? [];
-        const changesById = stationInfo?.changes ?? new Map<string, ChangeStop>();
+            const platform =
+              event.location?.properties?.platformName ||
+              event.location?.properties?.platform ||
+              "—";
+            const statusList = event.realtimeStatus ?? [];
+            const isCancelled = statusList.some((status) =>
+              status.toLowerCase().includes("cancel"),
+            );
+            const status = isCancelled
+              ? "Ausgefallen"
+              : event.departureTimeEstimated &&
+                  event.departureTimePlanned &&
+                  event.departureTimeEstimated !== event.departureTimePlanned
+                ? "Verspätet"
+                : "Pünktlich";
 
-        const matchingStops = stops.filter(
-          (stop) =>
-            stop.line.toLowerCase() === normalizedLine &&
-            stop.origin.toLowerCase() === normalizedOrigin &&
-            stop.destination.toLowerCase() === normalizedDestination,
-        );
-
-        const enrichedStops = matchingStops
-          .map((stop) => {
-            const change = changesById.get(stop.id);
-            const timeValue = change?.changedTime || stop.plannedTime;
-            const timeDate = parseDbDateTimeToUtc(timeValue);
             return {
-              stop,
-              change,
+              line: lineValue,
+              lineNormalized: normalizeLineValue(lineValue),
+              origin,
+              destination,
+              destinationNormalized: normalizeRouteEndpoint(destination),
               timeValue,
               timeDate,
+              platform,
+              status,
+              isCancelled,
             };
           })
-          .filter((entry) => entry.timeDate !== null)
-          .sort((a, b) => (a.timeDate?.getTime() ?? 0) - (b.timeDate?.getTime() ?? 0));
+          .filter((event): event is NormalizedVrrEvent => Boolean(event));
+
+        stationEvents.set(stationEvaId, normalizedEvents);
+      }
+
+      const now = new Date();
+      const departures = routes.map((route) => {
+        const normalizedLine = normalizeLineValue(route.line);
+        const normalizedDestination = normalizeRouteEndpoint(route.destination);
+        const events = stationEvents.get(route.station_eva_id) ?? [];
+
+        const matchingEvents = events
+          .filter(
+            (event) =>
+              event.lineNormalized === normalizedLine &&
+              matchesRouteEndpoint(normalizedDestination, event.destinationNormalized),
+          )
+          .sort((a, b) => a.timeDate.getTime() - b.timeDate.getTime());
 
         const nextDeparture =
-          enrichedStops.find((entry) => (entry.timeDate?.getTime() ?? 0) >= now.getTime()) ??
-          enrichedStops[0];
+          matchingEvents.find((event) => event.timeDate.getTime() >= now.getTime()) ??
+          matchingEvents[0];
 
         if (!nextDeparture) {
           return {
@@ -978,20 +778,14 @@ export default {
           };
         }
 
-        const { stop, change, timeValue, timeDate } = nextDeparture;
-        const plannedTime = stop.plannedTime;
-        const status = change?.cancelled
-          ? "Ausgefallen"
-          : change?.changedTime && change.changedTime !== plannedTime
-            ? "Verspätet"
-            : "Pünktlich";
+        const { timeValue, timeDate, status, platform, isCancelled } = nextDeparture;
 
         const travelMinutes = travelTimesByRoute.get(route.id)?.[0];
         const minutesUntil =
           timeDate ? Math.floor((timeDate.getTime() - now.getTime()) / 60000) : null;
         let action = "Später prüfen";
 
-        if (status === "Ausgefallen") {
+        if (isCancelled || status === "Ausgefallen") {
           action = "Auf die nächste warten";
         } else if (!travelMinutes) {
           action = "Wegzeit hinzufügen";
@@ -1013,7 +807,7 @@ export default {
           origin: route.origin,
           destination: route.destination,
           time: formatDisplayTime(timeValue),
-          platform: change?.platform || stop.platform || "—",
+          platform,
           status,
           action,
         };
@@ -1039,91 +833,13 @@ export default {
         return jsonResponse({ error: "Fehlender query-Parameter." }, { status: 400 });
       }
 
-      console.log("DB API env check", {
-        hasBaseUrl: Boolean(env.DB_API_BASE_URL),
-        hasClientId: Boolean(env.DB_API_CLIENT_ID),
-        hasApiKey: Boolean(env.DB_API_KEY),
-      });
-
-      if (!env.DB_API_BASE_URL || !env.DB_API_KEY || !env.DB_API_CLIENT_ID) {
-        return jsonResponse(
-          {
-            error: "Fehlende DB-API-Konfiguration.",
-          },
-          { status: 500 },
-        );
-      }
-
-      const apiUrl = new URL(env.DB_API_BASE_URL);
-      const basePath = apiUrl.pathname.replace(/\/$/, "");
-      apiUrl.pathname = `${basePath}/station/${encodeURIComponent(query)}`;
-
-      console.log("Fetching station data", {
-        url: apiUrl.toString(),
-      });
-
-      let stationResponse: Response;
-
-      try {
-        stationResponse = await fetch(apiUrl.toString(), {
-          headers: {
-            "DB-Client-ID": env.DB_API_CLIENT_ID,
-            "DB-Api-Key": env.DB_API_KEY,
-          },
-        });
-      } catch (error) {
-        console.error("Station API fetch failed", {
-          message: error instanceof Error ? error.message : String(error),
-        });
-        return jsonResponse({ error: "Stations-API ist nicht erreichbar." }, { status: 502 });
-      }
-
-      console.log("Station API response", {
-        status: stationResponse.status,
-        ok: stationResponse.ok,
-        contentType: stationResponse.headers.get("content-type"),
-      });
-
-      if (!stationResponse.ok) {
-        return jsonResponse(
-          {
-            error: "Stationsdaten konnten nicht geladen werden.",
-            status: stationResponse.status,
-          },
-          {
-            status: stationResponse.status,
-          },
-        );
-      }
-
-      let xmlPayload = "";
-
-      try {
-        xmlPayload = await stationResponse.text();
-      } catch (error) {
-        console.error("Station API read failed", {
-          message: error instanceof Error ? error.message : String(error),
-        });
-        return jsonResponse({ error: "Stationsantwort konnte nicht gelesen werden." }, { status: 502 });
-      }
-
-      console.log("Station API payload received", {
-        bytes: xmlPayload.length,
-        preview: xmlPayload.slice(0, 120),
-      });
-
-      const stations = parseStationsFromXml(xmlPayload);
-
-      if (!stations.length) {
-        console.log("Station API XML parse yielded no stations", {
-          payloadPreview: xmlPayload.slice(0, 200),
-        });
-      }
-
-      console.log("Station API parsed results", {
-        count: stations.length,
-        sample: stations.slice(0, 3),
-      });
+      const normalizedQuery = normalizeSearchText(query);
+      const stations = dortmundIndex.stations
+        .filter((station) => normalizeSearchText(station.name).includes(normalizedQuery))
+        .map((station) => ({
+          evaId: station.id,
+          name: normalizeStationName(station.name),
+        }));
 
       return jsonResponse({
         query,

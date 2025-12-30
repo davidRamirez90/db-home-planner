@@ -1,166 +1,86 @@
-# Deutsche Bahn API endpoints for DB Home Planner
+# VRR GTFS + EFA endpoints for DB Home Planner
 
-This document summarizes the **Timetables** API we can use for DB Home Planner. The project is constrained to this API because it is the only free-use DB API available to us right now.
+This document summarizes the VRR data sources used by DB Home Planner. We rely on GTFS for static route discovery and VRR EFA for realtime departures.
 
-> **Authoritative reference:** The OpenAPI document is checked into this repo at `docs/timetables-openapi.json`.
+## 1) VRR GTFS (static schedule data)
 
-## 1) Access prerequisites (account + credentials)
+**Dataset**:
+- https://opendata.ruhr/dataset/soll-fahrplandaten-vrr
 
-The Timetables API is hosted on the **DB API Marketplace** and requires API credentials.
+**Notes**:
+- Monthly snapshots, CC-BY license, VRR-wide coverage.
+- We only ingest Dortmund stations (`stop_id` prefix `de:05913:`).
+- GTFS provides full station + route relationships but no realtime.
 
-**Typical access steps**:
-1. Create an account at **developer.deutschebahn.com**.
-2. Create an **application** in the marketplace.
-3. Subscribe the app to **Timetables**.
-4. Retrieve **Client ID** + **API Key**.
+**Local build workflow**:
+1. Download the latest GTFS zip from the dataset page.
+2. Generate the Dortmund index:
+   ```
+   python3 workers/api/scripts/build_vrr_dortmund_index.py \
+     --gtfs-zip /path/to/gtfs_vrr_od.zip \
+     --output workers/api/src/vrr-dortmund-index.ts
+   ```
+3. Commit the updated index.
 
-**Headers used by Timetables**:
-```
-DB-Client-ID: <client-id>
-DB-Api-Key: <api-key>
-```
-
-## 2) Timetables endpoints we can use
+## 2) VRR EFA endpoints (realtime)
 
 Base URL:
 ```
-https://apis.deutschebahn.com/db-api-marketplace/apis/timetables/v1
+https://www.vrr.de/vrr-efa/
 ```
 
-### A) Station lookup
+### A) Departure monitor
 **Endpoint**:
-- `GET /station/{pattern}` — station name prefix, EVA number, DS100/rl100 code, or wildcard (`*`).
+- `GET XML_DM_REQUEST` (outputFormat=rapidJSON)
 
-**Notes for this project**:
-- Use this to resolve user-entered station names to EVA numbers.
-- Store `eva`, `name`, and `ds100` from the response.
+**Required parameters**:
+- `name_dm` — stop ID (e.g. `de:05913:526`)
+- `type_dm=any`
+- `itdDate=YYYYMMDD`
+- `itdTime=HHMM`
+- `useRealtime=1`
 
-### B) Planned timetable (hourly slices)
+**Used for**:
+- Realtime departures per station.
+- Line + destination labels to match tracked routes.
+
+### B) Stop finder (optional)
 **Endpoint**:
-- `GET /plan/{evaNo}/{date}/{hour}` — planned timetable for a station in an hourly time slice.
+- `GET XML_STOPFINDER_REQUEST` (outputFormat=rapidJSON)
 
-**Notes for this project**:
-- Planned data is static and does not contain messages.
-- Use this as the base schedule for the departures board.
+**Used for**:
+- Mapping user-entered names to VRR stop IDs when the GTFS index is insufficient.
 
-### C) Real-time changes
-**Endpoints**:
-- `GET /fchg/{evaNo}` — full known changes for a station.
-- `GET /rchg/{evaNo}` — recent changes only (last ~2 minutes).
+### C) Trip request (optional)
+**Endpoint**:
+- `GET XML_TRIP_REQUEST2` (outputFormat=rapidJSON)
 
-**Notes for this project**:
-- Load `fchg` initially; then poll `rchg` when updating more frequently.
-- Changes include `ct`, `cp`, `cs`, `cpth` on events plus messages.
+**Used for**:
+- Detailed journey legs if we decide to show full stop sequences.
 
-## 3) Example requests
+## 3) Project normalization
 
-**Planned timetable**:
-```
-GET https://apis.deutschebahn.com/db-api-marketplace/apis/timetables/v1/plan/8011160/240930/15
-Headers:
-  DB-Client-ID: <client-id>
-  DB-Api-Key: <api-key>
-```
-
-**Full changes**:
-```
-GET https://apis.deutschebahn.com/db-api-marketplace/apis/timetables/v1/fchg/8011160
-Headers:
-  DB-Client-ID: <client-id>
-  DB-Api-Key: <api-key>
-```
-
-**Station lookup**:
-```
-GET https://apis.deutschebahn.com/db-api-marketplace/apis/timetables/v1/station/BLS
-Headers:
-  DB-Client-ID: <client-id>
-  DB-Api-Key: <api-key>
-```
-
-## 4) Data models (DTOs) for our normalization layer
-
-We should normalize DB responses into a canonical model so the frontend and business logic are stable even if DB field names change.
+We normalize VRR data into a stable shape for the frontend:
 
 ### Station DTO
 ```ts
 export interface Station {
-  evaId: string;           // DB station identifier (EVA)
-  name: string;            // human-readable name
-  ds100?: string;          // station code
+  evaId: string; // VRR global stop id (e.g. de:05913:526)
+  name: string;
 }
 ```
 
-### Departure/Arrival DTO
+### Route candidate DTO
 ```ts
-export interface StationDeparture {
-  stationEvaId: string;
-  trainNumber?: string;    // e.g., "ICE 123" or numeric trainId
-  line?: string;           // if provided by DB
-  direction?: string;      // final destination
-  platform?: string;
-
-  // Times
-  scheduledTime: string;   // ISO string
-  realtimeTime?: string;   // ISO string if delayed
-
-  // Status flags
-  isCancelled: boolean;
-  delayMinutes?: number;
-
-  // Raw DB identifiers for merging
-  tripId?: string;         // if API provides a trip id
-  raw?: unknown;           // raw payload for debugging
+export interface RouteCandidate {
+  line: string;        // e.g. U47
+  origin: string;      // GTFS-derived terminus (start)
+  destination: string; // GTFS-derived terminus (end)
 }
 ```
 
-### Timetable response DTO (normalized)
-```ts
-export interface TimetableSnapshot {
-  stationEvaId: string;
-  generatedAt: string;      // ISO
-  departures: StationDeparture[];
-}
-```
+## 4) Implementation summary
 
-### Travel profile DTO (project-specific)
-```ts
-export interface TravelProfile {
-  id: string;
-  name: string;             // "fast", "slow", "custom"
-  minutesToStation: number;
-}
-```
-
-### Recommendation DTO (project-specific)
-```ts
-export interface DepartureRecommendation {
-  departure: StationDeparture;
-  profileId: string;
-  action: "walk-slowly" | "hurry" | "wait-next";
-  leaveHomeAt: string;      // ISO
-}
-```
-
-## 5) Integration plan (steps for our project)
-
-1. **Station lookup**
-   - Use `GET /station/{pattern}` for station search.
-   - Store `eva` + `name` (and `ds100` if needed) in config storage.
-
-2. **Planned departures**
-   - Call `GET /plan/{evaNo}/{date}/{hour}` for each configured station.
-   - Normalize stops into `StationDeparture` records with planned times.
-
-3. **Real-time updates**
-   - Call `GET /fchg/{evaNo}` for initial change data.
-   - Poll `GET /rchg/{evaNo}` to refresh changes at 30s intervals.
-   - Merge `ct`, `cp`, and cancellation status into departures.
-
-4. **Caching strategy**
-   - Cache planned data with a longer TTL (hourly slice).
-   - Cache changes for ~30s to match API refresh cadence.
-
-5. **Scheduled polling**
-   - Use Worker cron or client polling to update changes periodically.
-   - Recompute recommendations when new change data arrives.
+- **Station search**: Dortmund GTFS index.
+- **Route discovery**: Dortmund GTFS index.
+- **Realtime departures**: VRR EFA `XML_DM_REQUEST`.

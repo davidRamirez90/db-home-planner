@@ -42,8 +42,8 @@ wrangler login
    - `wrangler init workers/api --type=typescript`
 2. Create a Worker service in the Cloudflare dashboard or via Wrangler.
 3. Configure environment variables:
-   - `DB_API_KEY` (if needed)
-   - `DB_API_BASE_URL`
+   - No external credentials needed for VRR EFA endpoints.
+   - Store any future API keys here if we add authenticated services.
 
 ### 5) Data storage
 Decide based on access patterns:
@@ -74,9 +74,9 @@ Plan for separate dev/prod settings:
   - `wrangler dev`
 - Start Angular dev server once scaffolded.
 
-## Deutsche Bahn API notes
-- Identify the correct API(s) and authentication requirements.
-- Build a small compatibility layer in Workers to normalize responses.
+## VRR + GTFS notes
+- Build the Dortmund GTFS index with `workers/api/scripts/build_vrr_dortmund_index.py`.
+- Use VRR EFA `XML_DM_REQUEST` for realtime departures.
 
 ## Deployment flow (future)
 1. Push to main branch.
