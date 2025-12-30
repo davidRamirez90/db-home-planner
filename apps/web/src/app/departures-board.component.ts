@@ -44,14 +44,18 @@ export class DeparturesBoardComponent {
 
   protected readonly boardRows = computed(() => {
     const now = this.now();
-    return this.departures().map((departure) => ({
-      station: this.toDisplayValue(departure.stationName),
-      departure: this.toDisplayValue(departure.time),
-      line: formatLineLabel(departure.line),
-      countdown: this.formatCountdown(departure.time, now),
-      status: this.toDisplayValue(departure.status),
-      action: this.toDisplayValue(departure.action)
-    }));
+    return this.departures().map((departure) => {
+      const line = formatLineLabel(departure.line);
+      return {
+        station: this.toDisplayValue(departure.stationName),
+        departure: this.toDisplayValue(departure.time),
+        line,
+        lineBadge: this.formatLineBadge(line),
+        ...this.getCountdownInfo(departure.time, now),
+        status: this.toDisplayValue(departure.status),
+        ...this.formatAction(departure.action)
+      };
+    });
   });
 
   protected toChars(value: string): string[] {
@@ -70,37 +74,100 @@ export class DeparturesBoardComponent {
     return value.toUpperCase();
   }
 
-  private formatCountdown(time: string, now: number): string {
+  private getCountdownInfo(
+    time: string,
+    now: number
+  ): { countdown: string; countdownMinutes: number | null; isUrgent: boolean } {
     if (!time || time === '—') {
-      return '—';
+      return { countdown: '—', countdownMinutes: null, isUrgent: false };
     }
 
     const match = time.match(/^(\d{2}):(\d{2})$/);
     if (!match) {
-      return '—';
+      return { countdown: '—', countdownMinutes: null, isUrgent: false };
     }
 
     const hours = Number(match[1]);
     const minutes = Number(match[2]);
     if (Number.isNaN(hours) || Number.isNaN(minutes)) {
-      return '—';
+      return { countdown: '—', countdownMinutes: null, isUrgent: false };
     }
 
     const target = new Date();
     target.setHours(hours, minutes, 0, 0);
     const diffMs = target.getTime() - now;
     if (diffMs <= 0) {
-      return 'JETZT';
+      return { countdown: 'JETZT', countdownMinutes: 0, isUrgent: true };
     }
 
     const totalMinutes = Math.floor(diffMs / MS_PER_MINUTE);
     if (totalMinutes < MINUTES_PER_HOUR) {
-      return `${totalMinutes} MIN`;
+      return {
+        countdown: `${totalMinutes} MIN`,
+        countdownMinutes: totalMinutes,
+        isUrgent: totalMinutes < 3
+      };
     }
 
     const countdownHours = Math.floor(totalMinutes / MINUTES_PER_HOUR);
     const countdownMinutes = totalMinutes % MINUTES_PER_HOUR;
-    return `${countdownHours}STD ${countdownMinutes.toString().padStart(2, '0')}MIN`;
+    return {
+      countdown: `${countdownHours}STD ${countdownMinutes.toString().padStart(2, '0')}MIN`,
+      countdownMinutes: totalMinutes,
+      isUrgent: false
+    };
+  }
+
+  private formatLineBadge(lineLabel: string): string {
+    if (!lineLabel) {
+      return '—';
+    }
+
+    if (lineLabel.startsWith('S')) {
+      return '●';
+    }
+
+    if (lineLabel.startsWith('U')) {
+      return '■';
+    }
+
+    return '◆';
+  }
+
+  private formatAction(action: string): {
+    actionLabel: string;
+    actionIcon: string;
+    actionDetail: string;
+  } {
+    if (!action) {
+      return { actionLabel: '—', actionIcon: '', actionDetail: '' };
+    }
+
+    const trimmed = action.trim();
+    if (!trimmed) {
+      return { actionLabel: '—', actionIcon: '', actionDetail: '' };
+    }
+
+    const detail = trimmed.toUpperCase();
+    const normalized = trimmed.toLowerCase();
+
+    if (normalized.includes('beeil') || normalized.includes('renn') || normalized.includes('schnell')) {
+      return { actionLabel: 'RUN', actionIcon: '🏃', actionDetail: detail };
+    }
+
+    if (normalized.includes('langsam') || normalized.includes('geh') || normalized.includes('wegzeit')) {
+      return { actionLabel: 'WALK', actionIcon: '🚶', actionDetail: detail };
+    }
+
+    if (
+      normalized.includes('warte') ||
+      normalized.includes('prüf') ||
+      normalized.includes('nächste')
+    ) {
+      return { actionLabel: 'WAIT', actionIcon: '☕', actionDetail: detail };
+    }
+
+    return { actionLabel: detail, actionIcon: '', actionDetail: detail };
   }
 
   private formatClock(now: number): string {

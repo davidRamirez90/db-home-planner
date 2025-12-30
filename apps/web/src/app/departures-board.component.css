@@ -1,37 +1,60 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
 
 .board {
-  background: #0e0d0b;
-  border-radius: 1.5rem;
+  --ink-dark: #171512;
+  --ink-muted: #4f4a43;
+  --ink-light: #fbf9f3;
+  --ink-mid: #ded7cc;
+  background: var(--ink-light);
+  background-image: linear-gradient(
+      rgba(0, 0, 0, 0.04) 0,
+      rgba(0, 0, 0, 0.04) 1px,
+      transparent 1px,
+      transparent 24px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.04) 0,
+      rgba(0, 0, 0, 0.04) 1px,
+      transparent 1px,
+      transparent 24px
+    );
+  background-size: 24px 24px;
+  border-radius: 1.4rem;
   padding: 2rem;
-  color: #f6f4ef;
-  box-shadow: inset 0 0 0 1px #2c281f, 0 24px 40px rgba(0, 0, 0, 0.45);
+  color: var(--ink-dark);
+  border: 2px solid var(--ink-dark);
+  box-shadow: none;
+  font-family: "Space Mono", "IBM Plex Mono", "Menlo", "Consolas", "Courier New", monospace;
 }
 
 .board-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.2rem;
+  padding-bottom: 1rem;
   gap: 1rem;
+  border-bottom: 2px solid var(--ink-dark);
 }
 
 .board-title {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-size: 1.4rem;
-  font-weight: 600;
-  color: #f7e7b1;
-  letter-spacing: 0.05em;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--ink-dark);
+  letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
 .board-icon {
-  background: #2a241a;
-  border-radius: 0.6rem;
-  padding: 0.35rem 0.5rem;
-  font-size: 1rem;
+  background: var(--ink-dark);
+  color: var(--ink-light);
+  border-radius: 0.5rem;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.95rem;
 }
 
 .board-right {
@@ -44,42 +67,51 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  color: #d1c7b1;
-  font-size: 0.8rem;
+  color: var(--ink-muted);
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.25em;
+  font-weight: 600;
+}
+
+.board-label {
+  color: var(--ink-muted);
 }
 
 .board-status {
-  padding: 0.2rem 0.6rem;
+  padding: 0.2rem 0.55rem;
   border-radius: 999px;
-  background: #2a241a;
-  color: #f7e7b1;
+  border: 2px solid var(--ink-dark);
+  color: var(--ink-dark);
+  background: var(--ink-light);
+  font-weight: 700;
 }
 
 .board-status[data-status='loading'] {
-  background: #5b4a16;
+  background: var(--ink-mid);
 }
 
 .board-status[data-status='success'] {
-  background: #264d2a;
+  background: var(--ink-dark);
+  color: var(--ink-light);
 }
 
 .board-status[data-status='error'] {
-  background: #6e1c15;
+  background: var(--ink-dark);
+  color: var(--ink-light);
 }
 
 .board-clock {
   display: flex;
   align-items: center;
-  color: #ffffff;
-  font-size: 1.1rem;
+  color: var(--ink-dark);
+  font-size: 1.05rem;
 }
 
 .board-clock-text {
   display: block;
-  font-family: "Space Mono", "IBM Plex Mono", "Menlo", "Consolas", "Courier New", monospace;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.2em;
+  font-weight: 700;
 }
 
 .board-clock-segments {
@@ -90,57 +122,61 @@
 
 .board-error {
   margin: 0 0 1rem;
-  color: #f29f97;
-  font-weight: 600;
+  color: var(--ink-dark);
+  font-weight: 700;
 }
 
 .board-empty {
   margin: 0 0 1rem;
-  color: #d1c7b1;
-  font-weight: 600;
+  color: var(--ink-muted);
+  font-weight: 700;
 }
 
 .board-grid {
   display: grid;
-  gap: 0.2rem;
+  gap: 0.35rem;
   overflow-x: auto;
-  padding-bottom: 0.2rem;
+  padding-bottom: 0.4rem;
 }
 
 .board-row {
   display: grid;
-  grid-template-columns: 2.2fr 0.9fr 0.6fr 1.1fr 1.2fr 1.4fr;
-  gap: 0.2rem;
-  min-width: 760px;
+  grid-template-columns: 0.8fr 2.3fr 0.9fr 1.2fr 1.2fr 1.2fr;
+  gap: 0.35rem;
+  min-width: 820px;
 }
 
 .board-row--header .board-cell {
-  background: #d7b64c;
-  color: #1a150a;
+  background: var(--ink-dark);
+  color: var(--ink-light);
   text-transform: uppercase;
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.22em;
   font-size: 0.7rem;
+  justify-content: center;
+  text-align: center;
 }
 
 .board-cell {
-  background: #1a1712;
-  color: #fdfbf6;
-  padding: 0.45rem 0.5rem;
-  border-radius: 0.2rem;
-  font-family: "Space Mono", "IBM Plex Mono", "Menlo", "Consolas", "Courier New", monospace;
+  background: #ffffff;
+  color: var(--ink-dark);
+  padding: 0.5rem 0.55rem;
+  border-radius: 0.25rem;
+  border: 2px solid var(--ink-dark);
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   position: relative;
   overflow: hidden;
   white-space: nowrap;
-  box-shadow: inset 0 0 0 1px #2b261d;
+  display: flex;
+  align-items: center;
+  min-height: 2.6rem;
 }
 
 .board-text {
   display: block;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
 }
 
 .board-text--segments {
@@ -149,6 +185,70 @@
   flex-wrap: nowrap;
   gap: 0.04rem;
   letter-spacing: 0;
+}
+
+.board-cell--line {
+  justify-content: flex-start;
+}
+
+.board-line {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.board-line-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.board-cell--rest {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.board-cell--rest .board-text {
+  letter-spacing: 0.12em;
+}
+
+.board-cell--urgent {
+  background: #0b0b0b;
+  color: #ffffff;
+  border-color: #0b0b0b;
+}
+
+.board-cell--urgent .board-text {
+  color: #ffffff;
+}
+
+.board-cell--action {
+  justify-content: flex-start;
+}
+
+.board-action {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.board-action-label {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.board-action-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.board-action-label .board-text {
+  letter-spacing: 0.08em;
 }
 
 .sr-only {
@@ -163,29 +263,6 @@
   border: 0;
 }
 
-.board-cell::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.12) 0,
-      rgba(255, 255, 255, 0.12) 2px,
-      transparent 2px,
-      transparent 100%
-    ),
-    linear-gradient(
-      to right,
-      rgba(255, 255, 255, 0.1) 0,
-      rgba(255, 255, 255, 0.1) 1px,
-      transparent 1px,
-      transparent 100%
-    );
-  background-size: 100% 16px, 16px 100%;
-  opacity: 0.2;
-  pointer-events: none;
-}
-
 @media (max-width: 760px) {
   .board {
     padding: 1.5rem;
@@ -198,5 +275,9 @@
 
   .board-cell {
     font-size: 0.85rem;
+  }
+
+  .board-row {
+    min-width: 720px;
   }
 }

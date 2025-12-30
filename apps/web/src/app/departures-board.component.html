@@ -36,16 +36,31 @@
 
   <div class="board-grid" role="table" aria-label="Abfahrtsübersicht">
     <div class="board-row board-row--header" role="row">
+      <span class="board-cell board-cell--line" role="columnheader">LINIE</span>
       <span class="board-cell" role="columnheader">STATION</span>
       <span class="board-cell" role="columnheader">ZEIT</span>
-      <span class="board-cell" role="columnheader">LINIE</span>
-      <span class="board-cell" role="columnheader">RESTZEIT</span>
+      <span class="board-cell board-cell--rest" role="columnheader">REST</span>
       <span class="board-cell" role="columnheader">STATUS</span>
-      <span class="board-cell" role="columnheader">EMPFEHLUNG</span>
+      <span class="board-cell board-cell--action" role="columnheader">AKTION</span>
     </div>
 
     @for (row of boardRows(); track $index) {
       <div class="board-row" role="row">
+        <span class="board-cell board-cell--line" role="cell">
+          <span class="board-line">
+            <span class="board-line-badge" aria-hidden="true">{{ row.lineBadge }}</span>
+            @if (showSegmentDisplay) {
+              <span class="board-text board-text--segments" aria-hidden="true">
+                @for (char of toChars(row.line); track $index; let i = $index) {
+                  <app-segment-display [value]="char" [delayMs]="i * 35" />
+                }
+              </span>
+              <span class="sr-only">{{ row.line }}</span>
+            } @else {
+              <span class="board-text">{{ row.line }}</span>
+            }
+          </span>
+        </span>
         <span class="board-cell" role="cell">
           @if (showSegmentDisplay) {
             <span class="board-text board-text--segments" aria-hidden="true">
@@ -70,20 +85,12 @@
             <span class="board-text">{{ row.departure }}</span>
           }
         </span>
-        <span class="board-cell" role="cell">
-          @if (showSegmentDisplay) {
-            <span class="board-text board-text--segments" aria-hidden="true">
-              @for (char of toChars(row.line); track $index; let i = $index) {
-                <app-segment-display [value]="char" [delayMs]="i * 35" />
-              }
-            </span>
-            <span class="sr-only">{{ row.line }}</span>
-          } @else {
-            <span class="board-text">{{ row.line }}</span>
-          }
-        </span>
-        <span class="board-cell" role="cell">
-          @if (showSegmentDisplay) {
+        <span
+          class="board-cell board-cell--rest"
+          role="cell"
+          [class.board-cell--urgent]="row.isUrgent"
+        >
+          @if (showSegmentDisplay && !row.isUrgent) {
             <span class="board-text board-text--segments" aria-hidden="true">
               @for (char of toChars(row.countdown); track $index; let i = $index) {
                 <app-segment-display [value]="char" [delayMs]="i * 35" />
@@ -106,17 +113,28 @@
             <span class="board-text">{{ row.status }}</span>
           }
         </span>
-        <span class="board-cell" role="cell">
-          @if (showSegmentDisplay) {
-            <span class="board-text board-text--segments" aria-hidden="true">
-              @for (char of toChars(row.action); track $index; let i = $index) {
-                <app-segment-display [value]="char" [delayMs]="i * 35" />
+        <span
+          class="board-cell board-cell--action"
+          role="cell"
+          [attr.aria-label]="row.actionDetail || row.actionLabel"
+        >
+          <span class="board-action">
+            @if (row.actionIcon) {
+              <span class="board-action-icon" aria-hidden="true">{{ row.actionIcon }}</span>
+            }
+            <span class="board-action-label">
+              @if (showSegmentDisplay) {
+                <span class="board-text board-text--segments" aria-hidden="true">
+                  @for (char of toChars(row.actionLabel); track $index; let i = $index) {
+                    <app-segment-display [value]="char" [delayMs]="i * 35" />
+                  }
+                </span>
+                <span class="sr-only">{{ row.actionLabel }}</span>
+              } @else {
+                <span class="board-text">{{ row.actionLabel }}</span>
               }
             </span>
-            <span class="sr-only">{{ row.action }}</span>
-          } @else {
-            <span class="board-text">{{ row.action }}</span>
-          }
+          </span>
         </span>
       </div>
     }
