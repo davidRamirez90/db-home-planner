@@ -75,6 +75,8 @@ type TravelTimeRow = {
   minutes: number;
 };
 
+type TravelTimeLabel = "fast" | "slow";
+
 type VrrStopEvent = {
   realtimeStatus?: string[];
   location?: {
@@ -126,6 +128,8 @@ const berlinTimeFormatter = new Intl.DateTimeFormat("de-DE", {
   hour12: false,
 });
 
+const WAIT_BUFFER_MINUTES = 15;
+
 const normalizeSearchText = (value: string): string =>
   value
     .toLowerCase()
@@ -154,6 +158,14 @@ const normalizeLineLabel = (value: string): string => {
   }
 
   return value.trim().replace(/^de:nrw\.de:/i, "").trim().toUpperCase();
+};
+
+const normalizeTravelTimeLabel = (value: string): TravelTimeLabel | null => {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "fast" || normalized === "slow") {
+    return normalized;
+  }
+  return null;
 };
 
 const matchesRouteEndpoint = (routeValue: string, eventValue: string): boolean => {
@@ -565,12 +577,22 @@ export default {
           .bind(routeId)
           .all<TravelTimeRow>();
 
-        const times = (result.results ?? []).map((row) => ({
-          id: row.id,
-          routeId: row.route_id,
-          label: row.label,
-          minutes: row.minutes,
-        }));
+        const times = (result.results ?? [])
+          .map((row) => {
+            const label = normalizeTravelTimeLabel(row.label);
+            if (!label) {
+              return null;
+            }
+            return {
+              id: row.id,
+              routeId: row.route_id,
+              label,
+              minutes: row.minutes,
+            };
+          })
+          .filter((row): row is { id: string; routeId: string; label: TravelTimeLabel; minutes: number } =>
+            Boolean(row),
+          );
 
         return jsonResponse({
           count: times.length,
@@ -592,9 +614,10 @@ export default {
 
         const routeId = payload?.routeId?.trim();
         const label = payload?.label?.trim();
+        const normalizedLabel = label ? normalizeTravelTimeLabel(label) : null;
         const minutes = payload?.minutes;
 
-        if (!routeId || !label || typeof minutes !== "number" || Number.isNaN(minutes)) {
+        if (!routeId || !normalizedLabel || typeof minutes !== "number" || Number.isNaN(minutes)) {
           return jsonResponse(
             {
               error: "Erforderliche Wegzeitangaben fehlen.",
@@ -611,13 +634,13 @@ export default {
            VALUES (?1, ?2, ?3, ?4, ?5, ?6)
            ON CONFLICT(route_id, label) DO UPDATE SET minutes = excluded.minutes, updated_at = excluded.updated_at`,
         )
-          .bind(id, routeId, label, minutes, timestamp, timestamp)
+          .bind(id, routeId, normalizedLabel, minutes, timestamp, timestamp)
           .run();
 
         const saved = await env.D1_DB_PLANNER.prepare(
           "SELECT id, route_id, label, minutes FROM route_travel_times WHERE route_id = ?1 AND label = ?2",
         )
-          .bind(routeId, label)
+          .bind(routeId, normalizedLabel)
           .first<TravelTimeRow>();
 
         if (!saved) {
@@ -673,12 +696,16 @@ export default {
 
       const travelTimesByRoute = (travelTimesResult.results ?? []).reduce(
         (acc, row) => {
-          const list = acc.get(row.route_id) ?? [];
-          list.push(row.minutes);
-          acc.set(row.route_id, list);
+          const label = normalizeTravelTimeLabel(row.label);
+          if (!label) {
+            return acc;
+          }
+          const entry = acc.get(row.route_id) ?? {};
+          entry[label] = row.minutes;
+          acc.set(row.route_id, entry);
           return acc;
         },
-        new Map<string, number[]>(),
+        new Map<string, { fast?: number; slow?: number }>(),
       );
 
       const stationEvaIds = Array.from(new Set(routes.map((route) => route.station_eva_id)));
@@ -755,7 +782,7 @@ export default {
       }
 
       const now = new Date();
-      const departures = routes.map((route) => {
+      const departures = routes.flatMap((route) => {
         const normalizedLine = normalizeLineValue(route.line);
         const normalizedDestination = normalizeRouteEndpoint(route.destination);
         const events = stationEvents.get(route.station_eva_id) ?? [];
@@ -768,11 +795,60 @@ export default {
           )
           .sort((a, b) => a.timeDate.getTime() - b.timeDate.getTime());
 
-        const nextDeparture =
-          matchingEvents.find((event) => event.timeDate.getTime() >= now.getTime()) ??
-          matchingEvents[0];
+        const upcomingEvents = matchingEvents.filter(
+          (event) => event.timeDate.getTime() >= now.getTime(),
+        );
+        const selectedEvents =
+          upcomingEvents.length > 0 ? upcomingEvents.slice(0, 2) : matchingEvents.slice(0, 2);
 
-        if (!nextDeparture) {
+        if (selectedEvents.length === 0) {
+          return [
+            {
+              routeId: route.id,
+              stationEvaId: route.station_eva_id,
+              stationName: normalizeStationName(route.station_name),
+              line: route.line,
+              origin: route.origin,
+              destination: route.destination,
+              time: "—",
+              platform: "—",
+              status: "Keine Abfahrten",
+              action: "Später prüfen",
+            },
+          ];
+        }
+
+        const travelTimes = travelTimesByRoute.get(route.id);
+        const fastMinutes = travelTimes?.fast;
+        const slowMinutes = travelTimes?.slow;
+        const hasTravelTimes = typeof fastMinutes === "number" && typeof slowMinutes === "number";
+        const fastest = hasTravelTimes ? Math.min(fastMinutes, slowMinutes) : null;
+        const slowest = hasTravelTimes ? Math.max(fastMinutes, slowMinutes) : null;
+
+        return selectedEvents.map((nextDeparture) => {
+          const { timeValue, timeDate, status, platform, isCancelled } = nextDeparture;
+          const minutesUntil = Math.floor((timeDate.getTime() - now.getTime()) / 60000);
+          const shouldWait =
+            hasTravelTimes && slowest !== null && minutesUntil >= slowest + WAIT_BUFFER_MINUTES;
+          const displayStatus = shouldWait && !isCancelled ? "Warten" : status;
+          let action = "Später prüfen";
+
+          if (isCancelled || status === "Ausgefallen") {
+            action = "Auf die nächste warten";
+          } else if (!hasTravelTimes) {
+            action = "Wegzeit hinzufügen";
+          } else if (minutesUntil < 0) {
+            action = "Auf die nächste warten";
+          } else if (fastest !== null && minutesUntil < fastest) {
+            action = "Auf die nächste warten";
+          } else if (slowest !== null && minutesUntil < slowest) {
+            action = "Beeilen";
+          } else if (slowest !== null && minutesUntil <= slowest + WAIT_BUFFER_MINUTES) {
+            action = "Langsam gehen";
+          } else {
+            action = "Warten";
+          }
+
           return {
             routeId: route.id,
             stationEvaId: route.station_eva_id,
@@ -780,46 +856,12 @@ export default {
             line: route.line,
             origin: route.origin,
             destination: route.destination,
-            time: "—",
-            platform: "—",
-            status: "Keine Abfahrten",
-            action: "Später prüfen",
+            time: formatDisplayTime(timeValue),
+            platform,
+            status: displayStatus,
+            action,
           };
-        }
-
-        const { timeValue, timeDate, status, platform, isCancelled } = nextDeparture;
-
-        const travelMinutes = travelTimesByRoute.get(route.id)?.[0];
-        const minutesUntil =
-          timeDate ? Math.floor((timeDate.getTime() - now.getTime()) / 60000) : null;
-        let action = "Später prüfen";
-
-        if (isCancelled || status === "Ausgefallen") {
-          action = "Auf die nächste warten";
-        } else if (!travelMinutes) {
-          action = "Wegzeit hinzufügen";
-        } else if (minutesUntil === null || minutesUntil < 0) {
-          action = "Auf die nächste warten";
-        } else if (minutesUntil < travelMinutes) {
-          action = "Auf die nächste warten";
-        } else if (minutesUntil <= travelMinutes + 10) {
-          action = "Beeilen";
-        } else {
-          action = "Langsam gehen";
-        }
-
-        return {
-          routeId: route.id,
-          stationEvaId: route.station_eva_id,
-          stationName: normalizeStationName(route.station_name),
-          line: route.line,
-          origin: route.origin,
-          destination: route.destination,
-          time: formatDisplayTime(timeValue),
-          platform,
-          status,
-          action,
-        };
+        });
       });
 
       return jsonResponse({

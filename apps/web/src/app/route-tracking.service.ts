@@ -8,6 +8,7 @@ import {
   SaveTrackedRouteResponse,
   SaveTravelTimeResponse,
   TrackedRoutesResponse,
+  TravelTimeLabel,
   TravelTimesResponse
 } from './route-types';
 
@@ -20,7 +21,7 @@ type TrackRoutePayload = {
 
 type SaveTravelTimePayload = {
   routeId: string;
-  label: string;
+  label: TravelTimeLabel;
   minutes: number;
 };
 

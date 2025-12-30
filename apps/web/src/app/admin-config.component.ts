@@ -1,12 +1,22 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { workerApiBaseUrl } from './api-config';
 import { formatLineLabel, normalizeLineKey } from './line-format';
 import { RouteTrackingService } from './route-tracking.service';
-import { RouteCandidate, SaveTrackedRouteResponse, SaveTravelTimeResponse, TrackedRoute, TravelTime } from './route-types';
+import {
+  RouteCandidate,
+  SaveTrackedRouteResponse,
+  SaveTravelTimeResponse,
+  TrackedRoute,
+  TravelTime,
+  TravelTimeLabel
+} from './route-types';
 import { RequestState, SaveStationResponse, StationResult, StationSearchResponse } from './station-types';
 import { TrackedStationsService } from './tracked-stations.service';
+
+type TravelTimeDraft = Record<TravelTimeLabel, string>;
 
 @Component({
   selector: 'app-admin-config',
@@ -38,7 +48,7 @@ export class AdminConfigComponent {
   protected readonly travelTimesByRouteId = signal<Record<string, TravelTime[]>>({});
   protected readonly travelTimeRequestStatusByRoute = signal<Record<string, RequestState>>({});
   protected readonly travelTimeErrorMessageByRoute = signal<Record<string, string>>({});
-  protected readonly travelTimeDrafts = signal<Record<string, { label: string; minutes: string }>>({});
+  protected readonly travelTimeDrafts = signal<Record<string, TravelTimeDraft>>({});
   protected readonly savingTravelTimeRouteIds = signal<string[]>([]);
 
   protected readonly trackedRequestStatus = this.trackedStationsService.requestStatus;
@@ -335,32 +345,38 @@ export class AdminConfigComponent {
     return this.travelTimeErrorMessageByRoute()[routeId] ?? '';
   }
 
-  protected travelTimeDraft(routeId: string): { label: string; minutes: string } {
-    return this.travelTimeDrafts()[routeId] ?? { label: '', minutes: '' };
+  protected travelTimeDraft(routeId: string): TravelTimeDraft {
+    return this.travelTimeDrafts()[routeId] ?? { fast: '', slow: '' };
   }
 
-  protected updateTravelTimeLabel(routeId: string, value: string): void {
+  protected travelTimeMinutes(routeId: string, label: TravelTimeLabel): string {
+    const entry = this.travelTimes(routeId).find((time) => time.label === label);
+    return entry ? `${entry.minutes} Min` : 'Noch nicht gesetzt';
+  }
+
+  protected updateTravelTimeMinutes(routeId: string, label: TravelTimeLabel, value: string): void {
     this.travelTimeDrafts.update((drafts) => ({
       ...drafts,
-      [routeId]: { ...this.travelTimeDraft(routeId), label: value }
+      [routeId]: { ...this.travelTimeDraft(routeId), [label]: value }
     }));
   }
 
-  protected updateTravelTimeMinutes(routeId: string, value: string): void {
-    this.travelTimeDrafts.update((drafts) => ({
-      ...drafts,
-      [routeId]: { ...this.travelTimeDraft(routeId), minutes: value }
-    }));
-  }
-
-  protected saveTravelTime(route: TrackedRoute): void {
+  protected saveTravelTimes(route: TrackedRoute): void {
     const draft = this.travelTimeDraft(route.id);
-    const minutes = Number(draft.minutes);
+    const fastMinutes = Number(draft.fast);
+    const slowMinutes = Number(draft.slow);
 
-    if (!draft.label.trim() || Number.isNaN(minutes) || minutes <= 0) {
+    if (
+      !draft.fast.trim() ||
+      !draft.slow.trim() ||
+      Number.isNaN(fastMinutes) ||
+      Number.isNaN(slowMinutes) ||
+      fastMinutes <= 0 ||
+      slowMinutes <= 0
+    ) {
       this.travelTimeErrorMessageByRoute.update((errors) => ({
         ...errors,
-        [route.id]: 'Bitte eine Bezeichnung und eine positive Minutenanzahl eingeben.'
+        [route.id]: 'Bitte eine schnelle und langsame Wegzeit als positive Minutenanzahl eingeben.'
       }));
       return;
     }
@@ -376,42 +392,56 @@ export class AdminConfigComponent {
     }));
 
     try {
-      this.routeTrackingService
-        .saveTravelTime({ routeId: route.id, label: draft.label.trim(), minutes })
-        .subscribe({
-          next: (response: SaveTravelTimeResponse) => {
-            if (response?.time) {
-              this.travelTimesByRouteId.update((times) => {
-                const current = times[route.id] ?? [];
-                const existingIndex = current.findIndex((entry) => entry.label === response.time.label);
-                const next = [...current];
+      forkJoin([
+        this.routeTrackingService.saveTravelTime({
+          routeId: route.id,
+          label: 'fast',
+          minutes: fastMinutes
+        }),
+        this.routeTrackingService.saveTravelTime({
+          routeId: route.id,
+          label: 'slow',
+          minutes: slowMinutes
+        })
+      ]).subscribe({
+        next: (responses: SaveTravelTimeResponse[]) => {
+          const savedTimes = responses
+            .map((response) => response?.time)
+            .filter((time): time is TravelTime => Boolean(time));
+          if (savedTimes.length > 0) {
+            this.travelTimesByRouteId.update((times) => {
+              const current = times[route.id] ?? [];
+              const next = [...current];
+              for (const time of savedTimes) {
+                const existingIndex = next.findIndex((entry) => entry.label === time.label);
                 if (existingIndex >= 0) {
-                  next[existingIndex] = response.time;
+                  next[existingIndex] = time;
                 } else {
-                  next.push(response.time);
+                  next.push(time);
                 }
-                return {
-                  ...times,
-                  [route.id]: next.sort((a, b) => a.minutes - b.minutes)
-                };
-              });
-              this.travelTimeDrafts.update((drafts) => ({
-                ...drafts,
-                [route.id]: { label: '', minutes: '' }
-              }));
-            }
-          },
-          error: (error: HttpErrorResponse) => {
-            this.travelTimeErrorMessageByRoute.update((errors) => ({
-              ...errors,
-              [route.id]: error.message || 'Wegzeit konnte nicht gespeichert werden.'
-            }));
-            this.savingTravelTimeRouteIds.update((ids) => ids.filter((id) => id !== route.id));
-          },
-          complete: () => {
-            this.savingTravelTimeRouteIds.update((ids) => ids.filter((id) => id !== route.id));
+              }
+              return {
+                ...times,
+                [route.id]: next.sort((a, b) => a.minutes - b.minutes)
+              };
+            });
           }
-        });
+          this.travelTimeDrafts.update((drafts) => ({
+            ...drafts,
+            [route.id]: { fast: draft.fast.trim(), slow: draft.slow.trim() }
+          }));
+        },
+        error: (error: HttpErrorResponse) => {
+          this.travelTimeErrorMessageByRoute.update((errors) => ({
+            ...errors,
+            [route.id]: error.message || 'Wegzeiten konnten nicht gespeichert werden.'
+          }));
+          this.savingTravelTimeRouteIds.update((ids) => ids.filter((id) => id !== route.id));
+        },
+        complete: () => {
+          this.savingTravelTimeRouteIds.update((ids) => ids.filter((id) => id !== route.id));
+        }
+      });
     } catch (error: unknown) {
       this.travelTimeErrorMessageByRoute.update((errors) => ({
         ...errors,
@@ -456,10 +486,23 @@ export class AdminConfigComponent {
     try {
       this.routeTrackingService.loadTravelTimes(routeId).subscribe({
         next: (response) => {
+          const loadedTimes = response.times ?? [];
           this.travelTimesByRouteId.update((times) => ({
             ...times,
-            [routeId]: response.times ?? []
+            [routeId]: loadedTimes
           }));
+          this.travelTimeDrafts.update((drafts) => {
+            const existing = drafts[routeId] ?? { fast: '', slow: '' };
+            const fastMinutes = loadedTimes.find((time) => time.label === 'fast')?.minutes;
+            const slowMinutes = loadedTimes.find((time) => time.label === 'slow')?.minutes;
+            return {
+              ...drafts,
+              [routeId]: {
+                fast: existing.fast || (fastMinutes !== undefined ? fastMinutes.toString() : ''),
+                slow: existing.slow || (slowMinutes !== undefined ? slowMinutes.toString() : '')
+              }
+            };
+          });
           this.travelTimeRequestStatusByRoute.update((statuses) => ({
             ...statuses,
             [routeId]: 'success'

@@ -20,6 +20,8 @@ export type TrackedRoute = {
   destination: string;
 };
 
+export type TravelTimeLabel = 'fast' | 'slow';
+
 export type TrackedRoutesResponse = {
   count: number;
   routes: TrackedRoute[];
@@ -36,7 +38,7 @@ export type RemoveTrackedRouteResponse = {
 export type TravelTime = {
   id: string;
   routeId: string;
-  label: string;
+  label: TravelTimeLabel;
   minutes: number;
 };
 

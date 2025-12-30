@@ -235,48 +235,47 @@
                     <p class="error">{{ travelTimeError(route.id) }}</p>
                   }
                   @if (travelTimeStatus(route.id) === 'success') {
-                    @if (travelTimes(route.id).length > 0) {
-                      <ul class="travel-time-list">
-                        @for (time of travelTimes(route.id); track time.id) {
-                          <li>
-                            <strong>{{ time.label }}</strong>
-                            <span>{{ time.minutes }} Min</span>
-                          </li>
-                        }
-                      </ul>
-                    } @else {
-                      <p class="empty">Noch keine Wegzeiten konfiguriert.</p>
-                    }
+                    <ul class="travel-time-list">
+                      <li>
+                        <strong>Schnell</strong>
+                        <span>{{ travelTimeMinutes(route.id, 'fast') }}</span>
+                      </li>
+                      <li>
+                        <strong>Langsam</strong>
+                        <span>{{ travelTimeMinutes(route.id, 'slow') }}</span>
+                      </li>
+                    </ul>
                   }
                   <div class="travel-time-form">
                     <label class="field">
-                      <span class="label">Bezeichnung</span>
+                      <span class="label">Schnell (Minuten)</span>
                       <input
-                        #labelInput
-                        type="text"
-                        [value]="travelTimeDraft(route.id).label"
-                        placeholder="z. B. Schneller Gang"
-                        (input)="updateTravelTimeLabel(route.id, labelInput.value)"
+                        #fastInput
+                        type="number"
+                        min="1"
+                        [value]="travelTimeDraft(route.id).fast"
+                        placeholder="8"
+                        (input)="updateTravelTimeMinutes(route.id, 'fast', fastInput.value)"
                       />
                     </label>
                     <label class="field">
-                      <span class="label">Minuten</span>
+                      <span class="label">Langsam (Minuten)</span>
                       <input
-                        #minutesInput
+                        #slowInput
                         type="number"
                         min="1"
-                        [value]="travelTimeDraft(route.id).minutes"
-                        placeholder="10"
-                        (input)="updateTravelTimeMinutes(route.id, minutesInput.value)"
+                        [value]="travelTimeDraft(route.id).slow"
+                        placeholder="12"
+                        (input)="updateTravelTimeMinutes(route.id, 'slow', slowInput.value)"
                       />
                     </label>
                     <button
                       type="button"
                       class="save-button"
                       [disabled]="savingTravelTimeRouteIds().includes(route.id)"
-                      (click)="saveTravelTime(route)"
+                      (click)="saveTravelTimes(route)"
                     >
-                      {{ savingTravelTimeRouteIds().includes(route.id) ? 'Speichern…' : 'Wegzeit speichern' }}
+                      {{ savingTravelTimeRouteIds().includes(route.id) ? 'Speichern…' : 'Wegzeiten speichern' }}
                     </button>
                   </div>
                 </div>
