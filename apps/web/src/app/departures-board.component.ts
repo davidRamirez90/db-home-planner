@@ -3,10 +3,12 @@ import {
   Component,
   DestroyRef,
   computed,
+  effect,
   inject,
   signal
 } from '@angular/core';
 import { useSegmentDisplay } from './api-config';
+import { DepartureEntry } from './departure-types';
 import { DeparturesService } from './departures.service';
 import { formatLineLabel } from './line-format';
 import { RequestState } from './station-types';
@@ -15,6 +17,9 @@ import { SegmentDisplayComponent } from './segment-display.component';
 const COUNTDOWN_INTERVAL_MS = 5000;
 const MINUTES_PER_HOUR = 60;
 const MS_PER_MINUTE = 60_000;
+const EXPIRED_GRACE_MS = 60_000;
+const REFRESH_COOLDOWN_MS = 15_000;
+const DAY_ROLLOVER_GRACE_MS = 3 * 60 * 60 * 1000;
 
 @Component({
   selector: 'app-departures-board',
@@ -33,6 +38,7 @@ export class DeparturesBoardComponent {
   protected readonly boardTitle = signal('ABFAHRTEN');
   protected readonly showSegmentDisplay = useSegmentDisplay;
   private readonly now = signal(Date.now());
+  private readonly lastRefresh = signal(0);
 
   protected readonly displayStatus = computed(() => this.formatStatus(this.requestStatus()));
   protected readonly displayClock = computed(() => this.formatClock(this.now()));
@@ -191,7 +197,7 @@ export class DeparturesBoardComponent {
   }
 
   constructor() {
-    this.departuresService.loadDepartures();
+    this.refreshDepartures();
     const intervalId = window.setInterval(() => {
       this.now.set(Date.now());
     }, COUNTDOWN_INTERVAL_MS);
@@ -199,5 +205,61 @@ export class DeparturesBoardComponent {
     this.destroyRef.onDestroy(() => {
       window.clearInterval(intervalId);
     });
+
+    effect(() => {
+      const now = this.now();
+      const status = this.requestStatus();
+      const departures = this.departures();
+      const lastRefresh = this.lastRefresh();
+
+      if (status !== 'success') {
+        return;
+      }
+
+      if (now - lastRefresh < REFRESH_COOLDOWN_MS) {
+        return;
+      }
+
+      if (this.hasExpiredDeparture(departures, now)) {
+        this.refreshDepartures();
+      }
+    });
+  }
+
+  private refreshDepartures(): void {
+    this.lastRefresh.set(Date.now());
+    this.departuresService.loadDepartures();
+  }
+
+  private hasExpiredDeparture(departures: DepartureEntry[], now: number): boolean {
+    return departures.some((departure) => this.isDepartureExpired(departure.time, now));
+  }
+
+  private isDepartureExpired(time: string, now: number): boolean {
+    if (!time || time === '—') {
+      return false;
+    }
+
+    const match = time.match(/^(\d{2}):(\d{2})$/);
+    if (!match) {
+      return false;
+    }
+
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+      return false;
+    }
+
+    const target = new Date(now);
+    target.setHours(hours, minutes, 0, 0);
+    let diffMs = target.getTime() - now;
+
+    if (diffMs < -DAY_ROLLOVER_GRACE_MS) {
+      target.setDate(target.getDate() + 1);
+      diffMs = target.getTime() - now;
+    }
+
+    return diffMs < -EXPIRED_GRACE_MS;
   }
 }
