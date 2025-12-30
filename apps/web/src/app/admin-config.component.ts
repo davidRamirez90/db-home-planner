@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { workerApiBaseUrl } from './api-config';
+import { formatLineLabel, normalizeLineKey } from './line-format';
 import { RouteTrackingService } from './route-tracking.service';
 import { RouteCandidate, SaveTrackedRouteResponse, SaveTravelTimeResponse, TrackedRoute, TravelTime } from './route-types';
 import { RequestState, SaveStationResponse, StationResult, StationSearchResponse } from './station-types';
@@ -503,8 +504,8 @@ export class AdminConfigComponent {
     });
   }
 
-  private routeKey(line: string, origin: string, destination: string): string {
-    return `${line}::${origin}::${destination}`.toLowerCase();
+  protected routeKey(line: string, origin: string, destination: string): string {
+    return `${normalizeLineKey(line)}::${origin}::${destination}`.toLowerCase();
   }
 
   protected displayRequestStatus(status: RequestState): string {
@@ -518,5 +519,9 @@ export class AdminConfigComponent {
       default:
         return 'bereit';
     }
+  }
+
+  protected formatLineLabel(value: string): string {
+    return formatLineLabel(value);
   }
 }

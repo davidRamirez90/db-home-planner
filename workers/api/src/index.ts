@@ -143,9 +143,18 @@ const normalizeLineValue = (value: string): string =>
   value
     .toLowerCase()
     .replace(/\s+/g, "")
+    .replace(/^de:nrw\.de:/, "")
     .replace(/^u-bahn/, "")
     .replace(/^s-bahn/, "")
     .trim();
+
+const normalizeLineLabel = (value: string): string => {
+  if (!value) {
+    return value;
+  }
+
+  return value.trim().replace(/^de:nrw\.de:/i, "").trim().toUpperCase();
+};
 
 const matchesRouteEndpoint = (routeValue: string, eventValue: string): boolean => {
   if (!routeValue || !eventValue) {
@@ -450,7 +459,7 @@ export default {
         }
 
         const stationEvaId = payload?.stationEvaId?.trim();
-        const line = payload?.line?.trim();
+        const line = normalizeLineLabel(payload?.line ?? "");
         const origin = payload?.origin?.trim();
         const destination = payload?.destination?.trim();
 

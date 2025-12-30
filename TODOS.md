@@ -43,6 +43,7 @@
 - Create D1 schema for configuration data.
 - Add KV for caching planned slices and real-time changes.
 - Implement DAO layer in `packages/shared` or `workers/api`.
+- ✅ Normalize tracked route line codes (strip `de:nrw.de:` prefix).
 
 ## 5) VRR GTFS + EFA integration
 - ✅ Build Dortmund GTFS station + route index.

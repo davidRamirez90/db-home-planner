@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { useSegmentDisplay } from './api-config';
 import { DeparturesService } from './departures.service';
+import { formatLineLabel } from './line-format';
 import { RequestState } from './station-types';
 import { SegmentDisplayComponent } from './segment-display.component';
 
@@ -46,7 +47,7 @@ export class DeparturesBoardComponent {
     return this.departures().map((departure) => ({
       station: this.toDisplayValue(departure.stationName),
       departure: this.toDisplayValue(departure.time),
-      line: this.toDisplayValue(departure.line),
+      line: formatLineLabel(departure.line),
       countdown: this.formatCountdown(departure.time, now),
       status: this.toDisplayValue(departure.status),
       action: this.toDisplayValue(departure.action)

@@ -168,12 +168,12 @@
               <li class="result">
                 <div class="result-header">
                   <div>
-                    <div class="result-title">{{ route.line }}</div>
+                    <div class="result-title">{{ formatLineLabel(route.line) }}</div>
                     <div class="result-meta">
                       <span>{{ route.origin }} -> {{ route.destination }}</span>
                     </div>
                   </div>
-                  @if (trackedRouteKeys().has((route.line + '::' + route.origin + '::' + route.destination).toLowerCase())) {
+                  @if (trackedRouteKeys().has(routeKey(route.line, route.origin, route.destination))) {
                     <span class="saved-label" aria-label="Route verfolgt">Verfolgt</span>
                   } @else {
                     <button
@@ -212,7 +212,7 @@
               <li class="result">
                 <div class="result-header">
                   <div>
-                    <div class="result-title">{{ route.line }}</div>
+                    <div class="result-title">{{ formatLineLabel(route.line) }}</div>
                     <div class="result-meta">
                       <span>{{ route.origin }} -> {{ route.destination }}</span>
                     </div>
