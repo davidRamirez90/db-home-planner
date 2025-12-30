@@ -11,6 +11,7 @@ import { useSegmentDisplay } from './api-config';
 import { DepartureEntry } from './departure-types';
 import { DeparturesService } from './departures.service';
 import { formatLineLabel } from './line-format';
+import { OverflowScrollDirective } from './overflow-scroll.directive';
 import { RequestState } from './station-types';
 import { SegmentDisplayComponent } from './segment-display.component';
 
@@ -26,7 +27,7 @@ const DAY_ROLLOVER_GRACE_MS = 3 * 60 * 60 * 1000;
   templateUrl: './departures-board.component.html',
   styleUrl: './departures-board.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SegmentDisplayComponent]
+  imports: [SegmentDisplayComponent, OverflowScrollDirective]
 })
 export class DeparturesBoardComponent {
   private readonly destroyRef = inject(DestroyRef);
@@ -59,7 +60,7 @@ export class DeparturesBoardComponent {
         lineBadge: this.formatLineBadge(line),
         ...this.getCountdownInfo(departure.time, now),
         status: this.toDisplayValue(departure.status),
-        ...this.formatAction(departure.action)
+        action: this.toDisplayValue(departure.action)
       };
     });
   });
@@ -138,42 +139,6 @@ export class DeparturesBoardComponent {
     }
 
     return '◆';
-  }
-
-  private formatAction(action: string): {
-    actionLabel: string;
-    actionIcon: string;
-    actionDetail: string;
-  } {
-    if (!action) {
-      return { actionLabel: '—', actionIcon: '', actionDetail: '' };
-    }
-
-    const trimmed = action.trim();
-    if (!trimmed) {
-      return { actionLabel: '—', actionIcon: '', actionDetail: '' };
-    }
-
-    const detail = trimmed.toUpperCase();
-    const normalized = trimmed.toLowerCase();
-
-    if (normalized.includes('beeil') || normalized.includes('renn') || normalized.includes('schnell')) {
-      return { actionLabel: 'RUN', actionIcon: '🏃', actionDetail: detail };
-    }
-
-    if (normalized.includes('langsam') || normalized.includes('geh') || normalized.includes('wegzeit')) {
-      return { actionLabel: 'WALK', actionIcon: '🚶', actionDetail: detail };
-    }
-
-    if (
-      normalized.includes('warte') ||
-      normalized.includes('prüf') ||
-      normalized.includes('nächste')
-    ) {
-      return { actionLabel: 'WAIT', actionIcon: '☕', actionDetail: detail };
-    }
-
-    return { actionLabel: detail, actionIcon: '', actionDetail: detail };
   }
 
   private formatClock(now: number): string {

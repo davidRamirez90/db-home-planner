@@ -842,9 +842,9 @@ export default {
           } else if (fastest !== null && minutesUntil < fastest) {
             action = "Auf die nächste warten";
           } else if (slowest !== null && minutesUntil < slowest) {
-            action = "Beeilen";
+            action = "Schnell gehen";
           } else if (slowest !== null && minutesUntil <= slowest + WAIT_BUFFER_MINUTES) {
-            action = "Langsam gehen";
+            action = "In Ruhe gehen";
           } else {
             action = "Warten";
           }

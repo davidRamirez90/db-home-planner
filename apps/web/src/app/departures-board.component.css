@@ -216,23 +216,49 @@
 }
 
 .board-action {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
 }
 
-.board-action-label {
+.board-action-text {
+  display: inline-block;
+  padding-right: 2rem;
   font-size: 1rem;
   font-weight: 800;
-}
-
-.board-action-icon {
-  font-size: 1.3rem;
-  line-height: 1;
-}
-
-.board-action-label .board-text {
   letter-spacing: 0.08em;
+}
+
+.board-action.is-overflowing .board-action-text {
+  animation: board-marquee var(--scroll-duration, 8s) linear infinite;
+}
+
+@keyframes board-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(0);
+  }
+  85% {
+    transform: translateX(calc(-1 * var(--scroll-distance, 0px)));
+  }
+  100% {
+    transform: translateX(calc(-1 * var(--scroll-distance, 0px)));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-action.is-overflowing .board-action-text {
+    animation: none;
+  }
+
+  .board-action {
+    overflow-x: auto;
+  }
 }
 
 .sr-only {

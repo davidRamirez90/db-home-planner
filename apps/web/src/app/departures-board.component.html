@@ -116,24 +116,9 @@
         <span
           class="board-cell board-cell--action"
           role="cell"
-          [attr.aria-label]="row.actionDetail || row.actionLabel"
         >
-          <span class="board-action">
-            @if (row.actionIcon) {
-              <span class="board-action-icon" aria-hidden="true">{{ row.actionIcon }}</span>
-            }
-            <span class="board-action-label">
-              @if (showSegmentDisplay) {
-                <span class="board-text board-text--segments" aria-hidden="true">
-                  @for (char of toChars(row.actionLabel); track $index; let i = $index) {
-                    <app-segment-display [value]="char" [delayMs]="i * 35" />
-                  }
-                </span>
-                <span class="sr-only">{{ row.actionLabel }}</span>
-              } @else {
-                <span class="board-text">{{ row.actionLabel }}</span>
-              }
-            </span>
+          <span class="board-action" appOverflowScroll [appOverflowScroll]="row.action">
+            <span class="board-text board-action-text">{{ row.action }}</span>
           </span>
         </span>
       </div>
