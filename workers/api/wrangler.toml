@@ -6,9 +6,9 @@ compatibility_date = "2024-09-25"
 DB_API_BASE_URL = "https://apis.deutschebahn.com/db-api-marketplace/apis/timetables/v1"
 
 [[d1_databases]]
-binding = "db_home_planner_vrr"
-database_name = "db-home-planner-vrr"
-database_id = "79347905-71c6-41e8-8135-bc826396d2c8"
+binding = "D1_DB_PLANNER"
+database_name = "d1_db_homeplanner"
+database_id = "2ed8a449-feec-4d4e-845f-2e6d32ab7d5e"
 
 [[kv_namespaces]]
 binding = "KV_DB_PLANNER"
