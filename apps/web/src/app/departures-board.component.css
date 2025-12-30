@@ -1,25 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
-
 .board {
   --ink-dark: #171512;
   --ink-muted: #4f4a43;
   --ink-light: #fbf9f3;
   --ink-mid: #ded7cc;
   background: var(--ink-light);
-  background-image: linear-gradient(
-      rgba(0, 0, 0, 0.04) 0,
-      rgba(0, 0, 0, 0.04) 1px,
-      transparent 1px,
-      transparent 24px
-    ),
-    linear-gradient(
-      90deg,
-      rgba(0, 0, 0, 0.04) 0,
-      rgba(0, 0, 0, 0.04) 1px,
-      transparent 1px,
-      transparent 24px
-    );
-  background-size: 24px 24px;
   border-radius: 1.4rem;
   padding: 2rem;
   color: var(--ink-dark);

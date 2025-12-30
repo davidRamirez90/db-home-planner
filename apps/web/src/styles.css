@@ -1,7 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+
 :root {
-  color-scheme: dark;
-  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
-  background-color: #0b0a08;
+  color-scheme: light;
+  font-family: "Space Mono", "IBM Plex Mono", "Menlo", "Consolas", "Courier New", monospace;
+  background-color: #f2ede2;
+  color: #171512;
+  --ink-dark: #171512;
+  --ink-muted: #4f4a43;
+  --ink-light: #fbf9f3;
+  --ink-mid: #ded7cc;
 }
 
 * {
@@ -10,7 +17,8 @@
 
 body {
   margin: 0;
-  background: #0b0a08;
+  background: #f2ede2;
+  color: var(--ink-dark);
 }
 
 a {

@@ -1,25 +1,23 @@
 <div class="app-shell">
-  <header class="app-header">
-    <div class="brand">
-      <span class="brand-eyebrow">Abfahrtstafel</span>
-      <h1>{{ title() }}</h1>
-    </div>
-    <nav class="header-actions" aria-label="Primär">
-      <a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-        Tafel
-      </a>
-      <details class="config-menu">
-        <summary aria-haspopup="menu" aria-label="Konfigurationsmenü öffnen">
-          Konfig
-        </summary>
-        <div class="config-panel" role="menu">
-          <a class="nav-link" routerLink="/admin" routerLinkActive="active" role="menuitem">
-            Admin-Konfig
-          </a>
-        </div>
-      </details>
-    </nav>
-  </header>
+  <a
+    class="config-link config-link--admin"
+    routerLink="/admin"
+    routerLinkActive="active"
+    aria-label="Admin-Konfiguration öffnen"
+  >
+    <span aria-hidden="true">⚙</span>
+    <span class="sr-only">Admin-Konfiguration</span>
+  </a>
+  <a
+    class="config-link config-link--board"
+    routerLink="/"
+    routerLinkActive="active"
+    [routerLinkActiveOptions]="{ exact: true }"
+    aria-label="Zur Abfahrtstafel"
+  >
+    <span aria-hidden="true">←</span>
+    <span class="sr-only">Zur Abfahrtstafel</span>
+  </a>
 
   <main class="app-content">
     <router-outlet />

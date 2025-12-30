@@ -1,41 +1,44 @@
 .admin-page {
-  max-width: 960px;
+  max-width: 1040px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.75rem;
 }
 
 .admin-hero {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 2px solid var(--ink-dark);
 }
 
 .eyebrow {
   text-transform: uppercase;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.22em;
   font-size: 0.7rem;
-  color: #d7b64c;
+  color: var(--ink-muted);
 }
 
 .admin-hero h2 {
   margin: 0;
-  font-size: 1.8rem;
-  color: #f5f3ee;
+  font-size: 1.7rem;
+  color: var(--ink-dark);
+  letter-spacing: 0.04em;
 }
 
 .subtitle {
   margin: 0;
-  color: #d6d0c6;
+  color: var(--ink-muted);
 }
 
 .card {
-  background: #fdfaf1;
-  border-radius: 1rem;
+  background: var(--ink-light);
+  border-radius: 0.9rem;
   padding: 1.5rem;
-  color: #1b1a16;
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.2);
+  color: var(--ink-dark);
+  border: 2px solid var(--ink-dark);
 }
 
 .station-form {
@@ -52,30 +55,30 @@
 
 .field input {
   padding: 0.65rem 0.8rem;
-  border-radius: 0.6rem;
-  border: 1px solid #cfc5b2;
+  border-radius: 0.45rem;
+  border: 2px solid var(--ink-dark);
   font-size: 1rem;
-  background: #fffdfa;
-  color: #1b1a16;
+  background: #ffffff;
+  color: var(--ink-dark);
 }
 
 .field input:focus {
-  outline: 2px solid #d7b64c;
-  border-color: #d7b64c;
+  outline: 2px solid var(--ink-dark);
+  outline-offset: 2px;
 }
 
 .label {
-  font-weight: 600;
-  font-size: 0.85rem;
+  font-weight: 700;
+  font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: #5d533b;
+  letter-spacing: 0.16em;
+  color: var(--ink-muted);
 }
 
 .help {
   margin: 0;
-  color: #6d644f;
-  font-size: 0.9rem;
+  color: var(--ink-muted);
+  font-size: 0.85rem;
 }
 
 .form-actions {
@@ -85,17 +88,20 @@
 }
 
 .refresh-button {
-  border: none;
-  background: #1f1c16;
-  color: #f7e7b1;
-  padding: 0.7rem 1.2rem;
-  font-weight: 600;
-  border-radius: 0.6rem;
+  border: 2px solid var(--ink-dark);
+  background: var(--ink-dark);
+  color: var(--ink-light);
+  padding: 0.65rem 1.2rem;
+  font-weight: 700;
+  border-radius: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   cursor: pointer;
 }
 
 .refresh-button:hover:not(:disabled) {
-  background: #2b261d;
+  background: var(--ink-light);
+  color: var(--ink-dark);
 }
 
 .refresh-button:disabled {
@@ -105,20 +111,20 @@
 
 .select {
   padding: 0.65rem 0.8rem;
-  border-radius: 0.6rem;
-  border: 1px solid #cfc5b2;
+  border-radius: 0.45rem;
+  border: 2px solid var(--ink-dark);
   font-size: 1rem;
-  background: #fffdfa;
-  color: #1b1a16;
+  background: #ffffff;
+  color: var(--ink-dark);
 }
 
 .select option {
-  color: #1b1a16;
+  color: var(--ink-dark);
 }
 
 .select:focus {
-  outline: 2px solid #d7b64c;
-  border-color: #d7b64c;
+  outline: 2px solid var(--ink-dark);
+  outline-offset: 2px;
 }
 
 .route-actions {
@@ -130,27 +136,28 @@
 
 .status {
   text-transform: uppercase;
-  font-size: 0.7rem;
-  letter-spacing: 0.15em;
-  padding: 0.2rem 0.5rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  padding: 0.2rem 0.55rem;
   border-radius: 999px;
-  background: #e5dcc7;
-  color: #5d533b;
+  border: 2px solid var(--ink-dark);
+  background: var(--ink-light);
+  color: var(--ink-dark);
+  font-weight: 700;
 }
 
 .status[data-status='loading'] {
-  background: #ffe9a6;
-  color: #5b4a16;
+  background: var(--ink-mid);
 }
 
 .status[data-status='success'] {
-  background: #bde3c1;
-  color: #214d29;
+  background: var(--ink-dark);
+  color: var(--ink-light);
 }
 
 .status[data-status='error'] {
-  background: #f2b8b5;
-  color: #6e1c15;
+  background: #0b0b0b;
+  color: #ffffff;
 }
 
 .results {
@@ -163,10 +170,10 @@
 }
 
 .result {
-  border: 1px solid #e0d7c2;
-  padding: 0.8rem 1rem;
-  border-radius: 0.75rem;
-  background: #fffdfa;
+  border: 2px solid var(--ink-dark);
+  padding: 0.85rem 1rem;
+  border-radius: 0.6rem;
+  background: #ffffff;
 }
 
 .result-header {
@@ -185,22 +192,25 @@
   display: flex;
   gap: 1rem;
   margin-top: 0.4rem;
-  color: #5d533b;
-  font-size: 0.85rem;
+  color: var(--ink-muted);
+  font-size: 0.8rem;
 }
 
 .save-button {
-  border: none;
-  background: #d7b64c;
-  color: #1b1a16;
+  border: 2px solid var(--ink-dark);
+  background: var(--ink-dark);
+  color: var(--ink-light);
   padding: 0.45rem 0.8rem;
   border-radius: 0.5rem;
-  font-weight: 600;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   cursor: pointer;
 }
 
 .save-button:hover:not(:disabled) {
-  background: #c6a33f;
+  background: var(--ink-light);
+  color: var(--ink-dark);
 }
 
 .save-button:disabled {
@@ -209,17 +219,20 @@
 }
 
 .remove-button {
-  border: none;
-  background: #8f2f27;
-  color: #fff9f2;
+  border: 2px solid var(--ink-dark);
+  background: var(--ink-light);
+  color: var(--ink-dark);
   padding: 0.45rem 0.8rem;
   border-radius: 0.5rem;
-  font-weight: 600;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   cursor: pointer;
 }
 
 .remove-button:hover:not(:disabled) {
-  background: #7a251f;
+  background: var(--ink-dark);
+  color: var(--ink-light);
 }
 
 .remove-button:disabled {
@@ -228,29 +241,29 @@
 }
 
 .saved-label {
-  background: #1f1c16;
-  color: #f7e7b1;
+  background: var(--ink-dark);
+  color: var(--ink-light);
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.18em;
 }
 
 .loading {
   margin-top: 1rem;
-  color: #5d533b;
+  color: var(--ink-muted);
 }
 
 .error {
   margin-top: 1rem;
-  color: #6e1c15;
-  font-weight: 600;
+  color: var(--ink-dark);
+  font-weight: 700;
 }
 
 .empty {
   margin-top: 1rem;
-  color: #6d644f;
+  color: var(--ink-muted);
 }
 
 .section-header {
@@ -269,26 +282,26 @@
 }
 
 .section-divider {
-  height: 1px;
-  background: #e0d7c2;
+  height: 2px;
+  background: var(--ink-dark);
   margin: 1.5rem 0;
 }
 
 .travel-times {
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid #e0d7c2;
+  border-top: 2px solid var(--ink-dark);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
 .travel-times-header {
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 0.75rem;
-  color: #5d533b;
+  letter-spacing: 0.14em;
+  font-size: 0.7rem;
+  color: var(--ink-muted);
 }
 
 .travel-time-list {
@@ -303,8 +316,8 @@
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  font-size: 0.9rem;
-  color: #3f3725;
+  font-size: 0.85rem;
+  color: var(--ink-dark);
 }
 
 .travel-time-form {
